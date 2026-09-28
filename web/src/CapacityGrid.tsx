@@ -1,7 +1,8 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { fetchCapacity } from './api/capacity'
 import { CapacityInput } from './components/CapacityInput'
-import { filterPeople, type Filters } from './lib/filters'
+import { useDebouncedValue } from './hooks/useDebouncedValue'
+import type { Filters } from './lib/filters'
 import { status, type Status } from './lib/status'
 
 type Props = {
@@ -26,9 +27,12 @@ const cellStyles: Record<Status, string> = {
 // A person's weekly hours are editable from the grid. After a save, every
 // number that depends on them must be right — without a full page reload.
 export function CapacityGrid({ from, to, filters }: Props) {
+  const q = useDebouncedValue(filters.q.trim(), 300)
+  const { overOnly } = filters
+
   const { data, error, isPending, isFetching, refetch } = useQuery({
-    queryKey: ['capacity', from, to],
-    queryFn: ({ signal }) => fetchCapacity(from, to, signal),
+    queryKey: ['capacity', from, to, q, overOnly],
+    queryFn: ({ signal }) => fetchCapacity(from, to, { q, overOnly }, signal),
     placeholderData: keepPreviousData,
   })
 
@@ -47,12 +51,10 @@ export function CapacityGrid({ from, to, filters }: Props) {
     )
   }
 
-  const people = filterPeople(data.people, filters)
-
   return (
     <>
       <p className="mb-2 text-sm text-gray-500">
-        Showing {people.length} of {data.people.length} people
+        Showing {data.people.length} of {data.total} people
       </p>
       <div
         aria-busy={isFetching}
@@ -71,14 +73,14 @@ export function CapacityGrid({ from, to, filters }: Props) {
             </tr>
           </thead>
           <tbody>
-            {people.length === 0 && (
+            {data.people.length === 0 && (
               <tr>
                 <td colSpan={data.weeks.length + 2} className="px-3 py-6 text-center text-gray-500">
                   No one matches these filters.
                 </td>
               </tr>
             )}
-            {people.map((person) => (
+            {data.people.map((person) => (
               <tr key={person.id} className="border-t border-gray-200 dark:border-gray-800">
                 <th scope="row" className="px-3 py-2 text-left font-normal whitespace-nowrap">
                   {person.name}

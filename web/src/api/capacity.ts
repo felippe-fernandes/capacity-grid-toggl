@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { Filters } from '../lib/filters'
 
 const personCapacitySchema = z.object({
   id: z.number(),
@@ -10,13 +11,24 @@ const personCapacitySchema = z.object({
 const capacityDataSchema = z.object({
   weeks: z.array(z.iso.date()),
   people: z.array(personCapacitySchema),
+  total: z.number(),
 })
 
 export type PersonCapacity = z.infer<typeof personCapacitySchema>
 export type CapacityData = z.infer<typeof capacityDataSchema>
 
-export async function fetchCapacity(from: string, to: string, signal: AbortSignal): Promise<CapacityData> {
-  const res = await fetch(`/api/capacity?from=${from}&to=${to}`, { signal })
+export async function fetchCapacity(
+  from: string,
+  to: string,
+  filters: Filters,
+  signal: AbortSignal,
+): Promise<CapacityData> {
+  const params = new URLSearchParams({ from, to })
+  const q = filters.q.trim()
+  if (q) params.set('q', q)
+  if (filters.overOnly) params.set('over', '1')
+
+  const res = await fetch(`/api/capacity?${params}`, { signal })
   if (!res.ok) {
     const body = await res.json().catch(() => null)
     throw new Error(body?.error ?? `Request failed (${res.status})`)
