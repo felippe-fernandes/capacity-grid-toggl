@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -20,6 +21,7 @@ type personCapacity struct {
 type capacityResponse struct {
 	Weeks  []string         `json:"weeks"`
 	People []personCapacity `json:"people"`
+	Total  int              `json:"total"`
 }
 
 // handleCapacity serves GET /api/capacity?from=YYYY-MM-DD&to=YYYY-MM-DD
@@ -29,12 +31,13 @@ type capacityResponse struct {
 //
 // The response shape is yours to design — the grid in web/ is the consumer.
 func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
-	from, err := time.Parse(time.DateOnly, r.URL.Query().Get("from"))
+	query := r.URL.Query()
+	from, err := time.Parse(time.DateOnly, query.Get("from"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "from must be YYYY-MM-DD")
 		return
 	}
-	to, err := time.Parse(time.DateOnly, r.URL.Query().Get("to"))
+	to, err := time.Parse(time.DateOnly, query.Get("to"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "to must be YYYY-MM-DD")
 		return
@@ -43,6 +46,8 @@ func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "to must not be before from")
 		return
 	}
+	search := strings.TrimSpace(query.Get("q"))
+	overOnly := query.Get("over") == "1"
 
 	from = mondayOf(from)
 	to = mondayOf(to).AddDate(0, 0, 6)
@@ -53,6 +58,16 @@ func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(weeks) > maxWeeks {
 		writeError(w, http.StatusBadRequest, "range is limited to 26 weeks")
+		return
+	}
+
+	var total int
+	if err := s.db.QueryRow(r.Context(), `SELECT count(*) FROM people`).Scan(&total); err != nil {
+		if errors.Is(err, context.Canceled) {
+			return
+		}
+		log.Printf("capacity total: %v", err)
+		writeError(w, http.StatusInternalServerError, "could not load capacity")
 		return
 	}
 
@@ -71,12 +86,21 @@ func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
 			JOIN workdays wd ON wd.day BETWEEN a.start_date AND a.end_date
 			WHERE a.start_date <= $2 AND a.end_date >= $1
 			GROUP BY a.person_id, wd.week_start
+		),
+		matching AS (
+			SELECT p.id, p.name, p.weekly_hours
+			FROM people p
+			WHERE ($3 = '' OR position(lower($3) IN lower(p.name)) > 0)
+			  AND (NOT $4 OR EXISTS (
+			    SELECT 1 FROM allocated al
+			    WHERE al.person_id = p.id AND al.hours > p.weekly_hours
+			  ))
 		)
-		SELECT p.id, p.name, p.weekly_hours::float8, coalesce(al.hours, 0)::float8
-		FROM people p
+		SELECT m.id, m.name, m.weekly_hours::float8, coalesce(al.hours, 0)::float8
+		FROM matching m
 		CROSS JOIN weeks w
-		LEFT JOIN allocated al ON al.person_id = p.id AND al.week_start = w.week_start
-		ORDER BY p.name, p.id, w.week_start`, from, to)
+		LEFT JOIN allocated al ON al.person_id = m.id AND al.week_start = w.week_start
+		ORDER BY m.name, m.id, w.week_start`, from, to, search, overOnly)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			return
@@ -112,7 +136,7 @@ func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, capacityResponse{Weeks: weeks, People: people})
+	writeJSON(w, http.StatusOK, capacityResponse{Weeks: weeks, People: people, Total: total})
 }
 
 func mondayOf(t time.Time) time.Time {
