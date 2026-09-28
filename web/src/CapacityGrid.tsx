@@ -109,9 +109,7 @@ export function CapacityGrid({ from, to, filters }: Props) {
                     className={`px-3 py-2 text-right whitespace-nowrap ${cellStyles[status(hours, person.weeklyHours)]}`}
                   >
                     {hours} / {person.weeklyHours}
-                    {hours > person.weeklyHours && (
-                      <span className="ml-1 text-xs">+{hours - person.weeklyHours}h</span>
-                    )}
+                    {hours > person.weeklyHours && <span className="ml-1 text-xs">+{hours - person.weeklyHours}h</span>}
                   </td>
                 ))}
               </tr>

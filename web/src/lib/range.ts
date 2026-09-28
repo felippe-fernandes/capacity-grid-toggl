@@ -1,7 +1,6 @@
 import { z } from 'zod'
 import { addDays, daysBetween, mondayOf } from './dates'
 
-
 const MAX_DAYS = 26 * 7
 
 const rangeSchema = z.object({

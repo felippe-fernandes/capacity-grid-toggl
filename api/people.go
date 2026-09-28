@@ -30,7 +30,7 @@ func (s *server) handleUpdatePerson(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid person id")
 		return
 	}
-		r.Body = http.MaxBytesReader(w, r.Body, 1<<10)
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<10)
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	var req updatePersonRequest

@@ -27,21 +27,33 @@ describe('normalizeRange', () => {
 
 describe('withFrom', () => {
   it('pushes to forward when from moves past it', () => {
-    expect(withFrom({ from: '2026-01-05', to: '2026-01-18' }, '2026-02-04')).toEqual({ from: '2026-02-02', to: '2026-02-08' })
+    expect(withFrom({ from: '2026-01-05', to: '2026-01-18' }, '2026-02-04')).toEqual({
+      from: '2026-02-02',
+      to: '2026-02-08',
+    })
   })
 
   it('pulls to back to stay within 26 weeks', () => {
-    expect(withFrom({ from: '2026-01-05', to: '2026-07-05' }, '2025-12-01')).toEqual({ from: '2025-12-01', to: '2026-05-31' })
+    expect(withFrom({ from: '2026-01-05', to: '2026-07-05' }, '2025-12-01')).toEqual({
+      from: '2025-12-01',
+      to: '2026-05-31',
+    })
   })
 })
 
 describe('withTo', () => {
   it('pulls from back when to moves before it', () => {
-    expect(withTo({ from: '2026-01-05', to: '2026-01-18' }, '2025-12-24')).toEqual({ from: '2025-12-22', to: '2025-12-28' })
+    expect(withTo({ from: '2026-01-05', to: '2026-01-18' }, '2025-12-24')).toEqual({
+      from: '2025-12-22',
+      to: '2025-12-28',
+    })
   })
 
   it('pushes from forward to stay within 26 weeks', () => {
-    expect(withTo({ from: '2026-01-05', to: '2026-01-18' }, '2027-01-01')).toEqual({ from: '2026-07-06', to: '2027-01-03' })
+    expect(withTo({ from: '2026-01-05', to: '2026-01-18' }, '2027-01-01')).toEqual({
+      from: '2026-07-06',
+      to: '2027-01-03',
+    })
   })
 })
 

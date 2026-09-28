@@ -1,13 +1,5 @@
 import { CapacityGrid } from './CapacityGrid'
-import {
-  defaultRange,
-  parseRange,
-  rangeStartingAt,
-  serializeRange,
-  shiftRange,
-  withFrom,
-  withTo,
-} from './lib/range'
+import { defaultRange, parseRange, rangeStartingAt, serializeRange, shiftRange, withFrom, withTo } from './lib/range'
 import { DEFAULT_FILTERS, parseFilters, serializeFilters } from './lib/filters'
 import { useSearchParamsState } from './hooks/useSearchParamsState'
 
@@ -21,7 +13,7 @@ function today(): string {
 }
 
 export function App() {
-    const [range, setRange] = useSearchParamsState(parseRange, serializeRange, defaultRange(today()))
+  const [range, setRange] = useSearchParamsState(parseRange, serializeRange, defaultRange(today()))
 
   const [filters, setFilters] = useSearchParamsState(parseFilters, serializeFilters, DEFAULT_FILTERS)
 

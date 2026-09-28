@@ -32,8 +32,7 @@ function setup() {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )
   const { result } = renderHook(() => useUpdateWeeklyHours(4), { wrapper })
-  const hoursIn = (range: string) =>
-    queryClient.getQueryData<CapacityData>(['capacity', range])?.people[0].weeklyHours
+  const hoursIn = (range: string) => queryClient.getQueryData<CapacityData>(['capacity', range])?.people[0].weeklyHours
   return { result, hoursIn }
 }
 
