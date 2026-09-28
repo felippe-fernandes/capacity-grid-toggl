@@ -1,9 +1,16 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { fetchCapacity, status } from './capacity'
+import { fetchCapacity, status, type Status } from './capacity'
 
 type Props = {
   from: string
   to: string
+}
+
+const cellStyles: Record<Status, string> = {
+  free: 'text-gray-400 dark:text-gray-600',
+  ok: '',
+  full: 'bg-amber-100 dark:bg-amber-900/40',
+  over: 'bg-red-100 font-semibold text-red-800 dark:bg-red-900/50 dark:text-red-200',
 }
 
 // CapacityGrid renders one row per person and one column per week, showing
@@ -22,37 +29,49 @@ export function CapacityGrid({ from, to }: Props) {
   })
 
   if (isPending) {
-    return <p className="status">Loading capacity…</p>
+    return <p className="py-4 text-gray-500">Loading capacity…</p>
   }
 
   if (error) {
     return (
-      <div className="status error" role="alert">
+      <div role="alert" className="py-4 text-red-700 dark:text-red-400">
         <p>Could not load capacity: {error.message}</p>
-        <button onClick={() => refetch()}>Try again</button>
+        <button onClick={() => refetch()} className="mt-2 rounded border border-current px-3 py-1">
+          Try again
+        </button>
       </div>
     )
   }
 
   return (
-    <div className={isFetching ? 'grid is-fetching' : 'grid'} aria-busy={isFetching}>
-      <table>
-        <thead>
+    <div
+      aria-busy={isFetching}
+      className={`max-h-[75vh] overflow-auto rounded border border-gray-200 transition-opacity dark:border-gray-800 ${isFetching ? 'opacity-50' : ''}`}
+    >
+      <table className="w-full border-collapse text-sm tabular-nums">
+        <thead className="sticky top-0 z-10 bg-[Canvas]">
           <tr>
-            <th>Person</th>
-            <th>Capacity</th>
+            <th className="px-3 py-2 text-left font-medium">Person</th>
+            <th className="px-3 py-2 text-right font-medium">Capacity</th>
             {data.weeks.map((week) => (
-              <th key={week}>{week}</th>
+              <th key={week} className="px-3 py-2 text-right font-medium whitespace-nowrap">
+                {week}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {data.people.map((person) => (
-            <tr key={person.id}>
-              <th scope="row">{person.name}</th>
-              <td>{person.weeklyHours}h</td>
+            <tr key={person.id} className="border-t border-gray-200 dark:border-gray-800">
+              <th scope="row" className="px-3 py-2 text-left font-normal whitespace-nowrap">
+                {person.name}
+              </th>
+              <td className="px-3 py-2 text-right">{person.weeklyHours}h</td>
               {person.allocated.map((hours, i) => (
-                <td key={data.weeks[i]} className={`cell ${status(hours, person.weeklyHours)}`}>
+                <td
+                  key={data.weeks[i]}
+                  className={`px-3 py-2 text-right whitespace-nowrap ${cellStyles[status(hours, person.weeklyHours)]}`}
+                >
                   {hours} / {person.weeklyHours}
                 </td>
               ))}
