@@ -1,14 +1,19 @@
-export type PersonCapacity = {
-  id: number
-  name: string
-  weeklyHours: number
-  allocated: number[]
-}
+import { z } from 'zod'
 
-export type CapacityData = {
-  weeks: string[]
-  people: PersonCapacity[]
-}
+const personCapacitySchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  weeklyHours: z.number(),
+  allocated: z.array(z.number()),
+})
+
+const capacityDataSchema = z.object({
+  weeks: z.array(z.iso.date()),
+  people: z.array(personCapacitySchema),
+})
+
+export type PersonCapacity = z.infer<typeof personCapacitySchema>
+export type CapacityData = z.infer<typeof capacityDataSchema>
 
 export type Status = 'free' | 'ok' | 'full' | 'over'
 
@@ -38,15 +43,20 @@ export function mondayOf(iso: string): string {
   return addDays(iso, -((weekday + 6) % 7))
 }
 
+export function daysBetween(from: string, to: string): number {
+  return Math.round((toDate(to).getTime() - toDate(from).getTime()) / DAY_MS)
+}
+
 export async function fetchCapacity(from: string, to: string, signal: AbortSignal): Promise<CapacityData> {
   const res = await fetch(`/api/capacity?from=${from}&to=${to}`, { signal })
   if (!res.ok) {
     const body = await res.json().catch(() => null)
     throw new Error(body?.error ?? `Request failed (${res.status})`)
   }
-  return res.json()
-}
-
-export function daysBetween(from: string, to: string): number {
-  return Math.round((toDate(to).getTime() - toDate(from).getTime()) / DAY_MS)
+  const parsed = capacityDataSchema.safeParse(await res.json())
+  if (!parsed.success) {
+    console.error(parsed.error)
+    throw new Error('Unexpected response from the server')
+  }
+  return parsed.data
 }
