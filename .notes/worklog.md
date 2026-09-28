@@ -5,6 +5,6 @@ left unfinished. Append as you go; a line or two per entry is right.
 
 ---
 
-- branch `feat/capacity-grid`, one small branch per part, merged with --no-ff
+- branch `feat/capacity-grid`, one small branch per part
 - conventional commits (api / web / notes)
 - no make on windows, using docker compose directly
