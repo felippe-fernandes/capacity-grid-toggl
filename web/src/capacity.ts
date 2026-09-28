@@ -46,3 +46,7 @@ export async function fetchCapacity(from: string, to: string, signal: AbortSigna
   }
   return res.json()
 }
+
+export function daysBetween(from: string, to: string): number {
+  return Math.round((toDate(to).getTime() - toDate(from).getTime()) / DAY_MS)
+}
