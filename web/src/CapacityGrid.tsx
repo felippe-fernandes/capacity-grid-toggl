@@ -1,8 +1,5 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { fetchCapacityPage } from './api/capacity'
-import { capacityKeys } from './api/keys'
 import { CapacityInput } from './components/CapacityInput'
-import { useDebouncedValue } from './hooks/useDebouncedValue'
+import { useCapacityPages } from './hooks/useCapacityPages'
 import { formatWeek } from './lib/dates'
 import type { Filters } from './lib/filters'
 import { status, type Status } from './lib/status'
@@ -29,21 +26,24 @@ const cellStyles: Record<Status, string> = {
 // A person's weekly hours are editable from the grid. After a save, every
 // number that depends on them must be right — without a full page reload.
 export function CapacityGrid({ from, to, filters }: Props) {
-  const q = useDebouncedValue(filters.q.trim(), 300)
-  const { overOnly } = filters
-
-  const query = { from, to, q, overOnly }
-  const { data, error, isPending, isFetching, refetch } = useQuery({
-    queryKey: capacityKeys.list(query),
-    queryFn: ({ signal }) => fetchCapacityPage(query, undefined, signal),
-    placeholderData: keepPreviousData,
-  })
+  const {
+    people,
+    weeks,
+    matched,
+    isPending,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    error,
+    refetch,
+  } = useCapacityPages({ from, to }, filters)
 
   if (isPending) {
     return <p className="py-4 text-gray-500">Loading capacity…</p>
   }
 
-  if (error && !data) {
+  if (error && people.length === 0) {
     return (
       <div role="alert" className="py-4 text-red-700 dark:text-red-400">
         <p>Could not load capacity: {error.message}</p>
@@ -65,21 +65,21 @@ export function CapacityGrid({ from, to, filters }: Props) {
         </p>
       )}
       <p className="mb-2 text-sm text-gray-500">
-        Showing {data.people.length} of {data.matched ?? data.people.length} people
+        Showing {people.length} of {matched} people
       </p>
       <div
         aria-busy={isFetching}
-        className={`max-h-[75vh] overflow-auto rounded border border-gray-200 transition-opacity dark:border-gray-800 ${isFetching ? 'opacity-50' : ''}`}
+        className={`max-h-[75vh] overflow-auto rounded border border-gray-200 transition-opacity dark:border-gray-800 ${isFetching && !isFetchingNextPage ? 'opacity-50' : ''}`}
       >
         <table className="w-full border-collapse text-sm tabular-nums">
           <thead className="sticky top-0 z-10 bg-[Canvas]">
             <tr>
               <th className="sticky left-0 z-20 bg-[Canvas] px-3 py-2 text-left font-medium">Person</th>
               <th className="px-3 py-2 text-right font-medium">Capacity</th>
-              {data.weeks.map((week, i) => (
+              {weeks.map((week, i) => (
                 <th key={week} title={week} className="px-3 py-2 text-right font-medium whitespace-nowrap">
                   {formatWeek(week)}
-                  {(i === 0 || week.slice(0, 4) !== data.weeks[i - 1].slice(0, 4)) && (
+                  {(i === 0 || week.slice(0, 4) !== weeks[i - 1].slice(0, 4)) && (
                     <span className="block text-xs font-normal text-gray-500">{week.slice(0, 4)}</span>
                   )}
                 </th>
@@ -87,14 +87,14 @@ export function CapacityGrid({ from, to, filters }: Props) {
             </tr>
           </thead>
           <tbody>
-            {data.people.length === 0 && (
+            {people.length === 0 && (
               <tr>
-                <td colSpan={data.weeks.length + 2} className="px-3 py-6 text-center text-gray-500">
+                <td colSpan={weeks.length + 2} className="px-3 py-6 text-center text-gray-500">
                   No one matches these filters.
                 </td>
               </tr>
             )}
-            {data.people.map((person) => (
+            {people.map((person) => (
               <tr key={person.id} className="border-t border-gray-200 dark:border-gray-800">
                 <th
                   scope="row"
@@ -107,7 +107,7 @@ export function CapacityGrid({ from, to, filters }: Props) {
                 </td>
                 {person.allocated.map((hours, i) => (
                   <td
-                    key={data.weeks[i]}
+                    key={weeks[i]}
                     className={`px-3 py-2 text-right whitespace-nowrap ${cellStyles[status(hours, person.weeklyHours)]}`}
                   >
                     {hours} / {person.weeklyHours}
@@ -119,6 +119,15 @@ export function CapacityGrid({ from, to, filters }: Props) {
           </tbody>
         </table>
       </div>
+      {hasNextPage && (
+        <button
+          onClick={() => fetchNextPage()}
+          disabled={isFetchingNextPage}
+          className="mt-2 rounded border border-gray-300 px-3 py-1 dark:border-gray-700"
+        >
+          {isFetchingNextPage ? 'Loading…' : 'Load more'}
+        </button>
+      )}
     </>
   )
 }

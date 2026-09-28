@@ -24,7 +24,7 @@ export function CapacityInput({ person }: { person: PersonCapacity }) {
       mutation.reset()
       return
     }
-    mutation.mutate(parsed.hours, { onSuccess: () => setDraft(null) })
+    mutation.mutate({ hours: parsed.hours, expected: person.weeklyHours }, { onSuccess: () => setDraft(null) })
   }
 
   function discard() {

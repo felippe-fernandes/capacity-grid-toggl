@@ -1,30 +1,36 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { type InfiniteData, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { CapacityPage } from '../api/capacity'
 import { capacityKeys } from '../api/keys'
-import { updateWeeklyHours } from '../api/people'
+import { currentFromConflict, updateWeeklyHours } from '../api/people'
+import { patchPersonInPages } from '../lib/capacity'
 
-function withWeeklyHours(page: CapacityPage, id: number, weeklyHours: number): CapacityPage {
-  return { ...page, people: page.people.map((p) => (p.id === id ? { ...p, weeklyHours } : p)) }
-}
+type Pages = InfiniteData<CapacityPage, string | undefined>
+
+export type SaveVariables = { hours: number; expected: number }
 
 export function useUpdateWeeklyHours(personId: number) {
   const queryClient = useQueryClient()
   const mutationKey = ['weeklyHours', personId]
 
+  const setHoursEverywhere = (hours: number) =>
+    queryClient.setQueriesData<Pages>({ queryKey: capacityKeys.lists() }, (data) =>
+      data ? patchPersonInPages(data, personId, hours) : data,
+    )
+
   return useMutation({
     mutationKey,
     scope: { id: `weeklyHours-${personId}` },
-    mutationFn: (hours: number) => updateWeeklyHours(personId, hours),
-    onMutate: async (hours) => {
+    mutationFn: ({ hours, expected }: SaveVariables) => updateWeeklyHours(personId, hours, expected),
+    onMutate: async ({ hours }) => {
       await queryClient.cancelQueries({ queryKey: capacityKeys.lists() })
-      const previous = queryClient.getQueriesData<CapacityPage>({ queryKey: capacityKeys.lists() })
-      queryClient.setQueriesData<CapacityPage>({ queryKey: capacityKeys.lists() }, (page) =>
-        page ? withWeeklyHours(page, personId, hours) : page,
-      )
+      const previous = queryClient.getQueriesData<Pages>({ queryKey: capacityKeys.lists() })
+      setHoursEverywhere(hours)
       return { previous }
     },
-    onError: (_error, _hours, context) => {
+    onError: (error, _variables, context) => {
       context?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data))
+      const current = currentFromConflict(error)
+      if (current) setHoursEverywhere(current.weeklyHours)
     },
     onSuccess: () => {
       if (queryClient.isMutating({ mutationKey }) === 1) {
