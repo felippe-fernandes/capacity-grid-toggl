@@ -2,10 +2,11 @@ import type { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { CapacityData } from '../api/capacity'
+import type { CapacityPage } from '../api/capacity'
+import { describeSaveError } from '../lib/saveErrors'
 import { useUpdateWeeklyHours } from './useUpdateWeeklyHours'
 
-const capacity = (weeklyHours: number): CapacityData => ({
+const capacity = (weeklyHours: number): CapacityPage => ({
   weeks: ['2026-01-05'],
   matched: 1,
   people: [{ id: 4, name: 'Dee Okafor', weeklyHours, allocated: [45] }],
@@ -26,13 +27,14 @@ function setup() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-  queryClient.setQueryData(['capacity', 'this range'], capacity(40))
-  queryClient.setQueryData(['capacity', 'another range'], capacity(40))
+  const keyFor = (range: string) => ['capacity', 'list', range]
+  queryClient.setQueryData(keyFor('this range'), capacity(40))
+  queryClient.setQueryData(keyFor('another range'), capacity(40))
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )
   const { result } = renderHook(() => useUpdateWeeklyHours(4), { wrapper })
-  const hoursIn = (range: string) => queryClient.getQueryData<CapacityData>(['capacity', range])?.people[0].weeklyHours
+  const hoursIn = (range: string) => queryClient.getQueryData<CapacityPage>(keyFor(range))?.people[0].weeklyHours
   return { result, hoursIn }
 }
 
@@ -63,7 +65,7 @@ describe('useUpdateWeeklyHours', () => {
     act(() => result.current.mutate(50))
 
     await waitFor(() => expect(result.current.isError).toBe(true))
-    expect(result.current.error?.message).toBe("Couldn't save. Try again.")
+    expect(describeSaveError(result.current.error)).toBe("Couldn't save. Try again.")
     expect(hoursIn('this range')).toBe(40)
     expect(hoursIn('another range')).toBe(40)
   })
@@ -75,7 +77,7 @@ describe('useUpdateWeeklyHours', () => {
     act(() => result.current.mutate(50))
 
     await waitFor(() => expect(result.current.isError).toBe(true))
-    expect(result.current.error?.message).toBe("Couldn't reach the server. Check your connection.")
+    expect(describeSaveError(result.current.error)).toBe("Couldn't reach the server. Check your connection.")
   })
 
   it('sends saves for the same person one at a time, in order', async () => {

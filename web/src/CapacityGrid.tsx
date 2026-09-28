@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { fetchCapacity } from './api/capacity'
+import { fetchCapacityPage } from './api/capacity'
+import { capacityKeys } from './api/keys'
 import { CapacityInput } from './components/CapacityInput'
 import { useDebouncedValue } from './hooks/useDebouncedValue'
 import { formatWeek } from './lib/dates'
@@ -31,9 +32,10 @@ export function CapacityGrid({ from, to, filters }: Props) {
   const q = useDebouncedValue(filters.q.trim(), 300)
   const { overOnly } = filters
 
+  const query = { from, to, q, overOnly }
   const { data, error, isPending, isFetching, refetch } = useQuery({
-    queryKey: ['capacity', from, to, q, overOnly],
-    queryFn: ({ signal }) => fetchCapacity(from, to, { q, overOnly }, signal),
+    queryKey: capacityKeys.list(query),
+    queryFn: ({ signal }) => fetchCapacityPage(query, undefined, signal),
     placeholderData: keepPreviousData,
   })
 
@@ -63,7 +65,7 @@ export function CapacityGrid({ from, to, filters }: Props) {
         </p>
       )}
       <p className="mb-2 text-sm text-gray-500">
-        Showing {data.people.length} of {data.matched} people
+        Showing {data.people.length} of {data.matched ?? data.people.length} people
       </p>
       <div
         aria-busy={isFetching}

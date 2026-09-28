@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { weeklyHoursSchema, type PersonCapacity } from '../api/capacity'
+import type { PersonCapacity } from '../api/capacity'
 import { useUpdateWeeklyHours } from '../hooks/useUpdateWeeklyHours'
+import { describeSaveError } from '../lib/saveErrors'
+import { parseWeeklyHours } from '../lib/weeklyHours'
 
 export function CapacityInput({ person }: { person: PersonCapacity }) {
   const [draft, setDraft] = useState<string | null>(null)
@@ -11,18 +13,18 @@ export function CapacityInput({ person }: { person: PersonCapacity }) {
 
   function save() {
     if (draft === null) return
-    const parsed = weeklyHoursSchema.safeParse(draft.trim() === '' ? NaN : Number(draft))
-    if (!parsed.success) {
-      setInvalid(parsed.error.issues[0].message)
+    const parsed = parseWeeklyHours(draft)
+    if (!parsed.ok) {
+      setInvalid(parsed.message)
       return
     }
     setInvalid(null)
-    if (parsed.data === person.weeklyHours) {
+    if (parsed.hours === person.weeklyHours) {
       setDraft(null)
       mutation.reset()
       return
     }
-    mutation.mutate(parsed.data, { onSuccess: () => setDraft(null) })
+    mutation.mutate(parsed.hours, { onSuccess: () => setDraft(null) })
   }
 
   function discard() {
@@ -31,7 +33,7 @@ export function CapacityInput({ person }: { person: PersonCapacity }) {
     mutation.reset()
   }
 
-  const message = invalid ?? (mutation.isError ? mutation.error.message : null)
+  const message = invalid ?? (mutation.isError ? describeSaveError(mutation.error) : null)
 
   return (
     <form
@@ -43,7 +45,7 @@ export function CapacityInput({ person }: { person: PersonCapacity }) {
     >
       <input
         type="number"
-        step="any"
+        step="1"
         value={value}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={() => {

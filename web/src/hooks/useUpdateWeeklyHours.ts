@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { updateWeeklyHours, type CapacityData } from '../api/capacity'
+import type { CapacityPage } from '../api/capacity'
+import { capacityKeys } from '../api/keys'
+import { updateWeeklyHours } from '../api/people'
 
-function withWeeklyHours(data: CapacityData, id: number, weeklyHours: number): CapacityData {
-  return { ...data, people: data.people.map((p) => (p.id === id ? { ...p, weeklyHours } : p)) }
+function withWeeklyHours(page: CapacityPage, id: number, weeklyHours: number): CapacityPage {
+  return { ...page, people: page.people.map((p) => (p.id === id ? { ...p, weeklyHours } : p)) }
 }
 
 export function useUpdateWeeklyHours(personId: number) {
@@ -14,10 +16,10 @@ export function useUpdateWeeklyHours(personId: number) {
     scope: { id: `weeklyHours-${personId}` },
     mutationFn: (hours: number) => updateWeeklyHours(personId, hours),
     onMutate: async (hours) => {
-      await queryClient.cancelQueries({ queryKey: ['capacity'] })
-      const previous = queryClient.getQueriesData<CapacityData>({ queryKey: ['capacity'] })
-      queryClient.setQueriesData<CapacityData>({ queryKey: ['capacity'] }, (data) =>
-        data ? withWeeklyHours(data, personId, hours) : data,
+      await queryClient.cancelQueries({ queryKey: capacityKeys.lists() })
+      const previous = queryClient.getQueriesData<CapacityPage>({ queryKey: capacityKeys.lists() })
+      queryClient.setQueriesData<CapacityPage>({ queryKey: capacityKeys.lists() }, (page) =>
+        page ? withWeeklyHours(page, personId, hours) : page,
       )
       return { previous }
     },
@@ -26,7 +28,7 @@ export function useUpdateWeeklyHours(personId: number) {
     },
     onSuccess: () => {
       if (queryClient.isMutating({ mutationKey }) === 1) {
-        return queryClient.invalidateQueries({ queryKey: ['capacity'] })
+        return queryClient.invalidateQueries({ queryKey: capacityKeys.all })
       }
     },
   })
