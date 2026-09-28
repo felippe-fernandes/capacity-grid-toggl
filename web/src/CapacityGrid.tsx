@@ -1,5 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { fetchCapacity, status, type Status } from './capacity'
+import { fetchCapacity } from './api/capacity'
+import { status, type Status } from './lib/status'
+
 
 type Props = {
   from: string

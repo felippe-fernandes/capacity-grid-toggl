@@ -7,8 +7,9 @@ import {
   shiftRange,
   withFrom,
   withTo,
-} from './range'
-import { useSearchParamsState } from './useSearchParamsState'
+} from './lib/range'
+import { useSearchParamsState } from './hooks/useSearchParamsState'
+
 
 const buttonClass =
   'rounded border border-gray-300 px-3 py-1 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800'
