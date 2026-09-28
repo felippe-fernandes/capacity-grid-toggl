@@ -43,3 +43,9 @@ left unfinished. Append as you go; a line or two per entry is right.
 - editing capacity rewrites past weeks too, no dates on weekly_hours. would need a capacity_changes table with effective_from, schema is fixed
 - not done: two quick saves on the same person can race, no automated test for the edit flow
 - after the required parts: stopped logging client cancellations (context canceled) as errors in the capacity endpoint. checked by clicking the arrows fast with `docker compose logs -f api` open, nothing new shows up
+- after the required parts: cells over capacity show "+Xh" so the manager doesn't do the math
+- filters: name search + "only over-allocated", both in the url with the same useSearchParamsState hook. hook now drops empty params so the url doesn't keep `?q=`
+- filters run in the browser, fine for 500 people. with pagination they'd have to move to the api (?q=&over=1)
+- no zod on filters, any url value maps to a valid filter (text is a search, anything but over=1 is off)
+- with "only over-allocated" on, a person disappears as soon as you fix their capacity. makes sense but could surprise someone, left as is
+- tests: filterPeople, parse/serialize filters, empty param removal in the hook. 28 passing
