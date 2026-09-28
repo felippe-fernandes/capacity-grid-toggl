@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"log"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -16,8 +18,19 @@ type server struct {
 }
 
 func main() {
-	ctx := context.Background()
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := run(ctx, logger); err != nil {
+		logger.Error("api stopped", "err", err)
+		os.Exit(1)
+	}
+}
+
+func run(ctx context.Context, logger *slog.Logger) error {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
 		dsn = "postgres://capacity:capacity@localhost:5432/capacity?sslmode=disable"
@@ -25,47 +38,71 @@ func main() {
 
 	db, err := pgxpool.New(ctx, dsn)
 	if err != nil {
-		log.Fatalf("connect: %v", err)
+		return fmt.Errorf("connect: %w", err)
 	}
 	defer db.Close()
 
-	for i := 0; i < 30; i++ {
-		if err = db.Ping(ctx); err == nil {
-			break
-		}
-		time.Sleep(time.Second)
-	}
-	if err != nil {
-		log.Fatalf("ping: %v", err)
+	if err := waitForDB(ctx, db); err != nil {
+		return err
 	}
 
 	s := &server{db: db}
+	httpServer := &http.Server{
+		Addr:              ":8080",
+		Handler:           logRequests(logger, s.routes()),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
 
+	errCh := make(chan error, 1)
+	go func() {
+		logger.Info("listening", "addr", httpServer.Addr)
+		errCh <- httpServer.ListenAndServe()
+	}()
+
+	select {
+	case err := <-errCh:
+		return fmt.Errorf("listen: %w", err)
+	case <-ctx.Done():
+	}
+
+	logger.Info("shutting down")
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	return httpServer.Shutdown(shutdownCtx)
+}
+
+func waitForDB(ctx context.Context, db *pgxpool.Pool) error {
+	var err error
+	for range 30 {
+		if err = db.Ping(ctx); err == nil {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(time.Second):
+		}
+	}
+	return fmt.Errorf("ping: %w", err)
+}
+
+func (s *server) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", s.handleHealth)
 	mux.HandleFunc("GET /api/capacity", s.handleCapacity)
 	mux.HandleFunc("PATCH /api/people/{id}", s.handleUpdatePerson)
-
-	log.Println("listening on :8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	return mux
 }
 
 func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	var people int
 	if err := s.db.QueryRow(r.Context(), `SELECT count(*) FROM people`).Scan(&people); err != nil {
-		log.Printf("health: %v", err)
-		writeError(w, http.StatusInternalServerError, "database unavailable")
+		slog.ErrorContext(r.Context(), "health check failed", "err", err)
+		writeError(w, http.StatusServiceUnavailable, codeUnavailable, "database unavailable")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "people": people})
-}
-
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(v)
-}
-
-func writeError(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, map[string]string{"error": msg})
 }

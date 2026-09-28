@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -27,7 +26,7 @@ type personResponse struct {
 func (s *server) handleUpdatePerson(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid person id")
+		writeError(w, http.StatusBadRequest, codeInvalidID, "invalid person id")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<10)
@@ -35,16 +34,16 @@ func (s *server) handleUpdatePerson(w http.ResponseWriter, r *http.Request) {
 	decoder.DisallowUnknownFields()
 	var req updatePersonRequest
 	if err := decoder.Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, `body must be JSON like {"weeklyHours": 32}`)
+		writeError(w, http.StatusBadRequest, codeInvalidBody, `body must be JSON like {"weeklyHours": 32}`)
 		return
 	}
 	if req.WeeklyHours == nil {
-		writeError(w, http.StatusBadRequest, "weeklyHours is required")
+		writeError(w, http.StatusBadRequest, codeInvalidBody, "weeklyHours is required")
 		return
 	}
 	hours := *req.WeeklyHours
 	if hours < 0 || hours > 168 {
-		writeError(w, http.StatusBadRequest, "weeklyHours must be between 0 and 168")
+		writeError(w, http.StatusBadRequest, codeInvalidHours, "weeklyHours must be between 0 and 168")
 		return
 	}
 
@@ -54,12 +53,11 @@ func (s *server) handleUpdatePerson(w http.ResponseWriter, r *http.Request) {
 		hours, id,
 	).Scan(&p.ID, &p.Name, &p.WeeklyHours)
 	if errors.Is(err, pgx.ErrNoRows) {
-		writeError(w, http.StatusNotFound, "person not found")
+		writeError(w, http.StatusNotFound, codeNotFound, "person not found")
 		return
 	}
 	if err != nil {
-		log.Printf("update person: %v", err)
-		writeError(w, http.StatusInternalServerError, "could not save weekly hours")
+		writeInternalError(w, r, "save weekly hours", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, p)

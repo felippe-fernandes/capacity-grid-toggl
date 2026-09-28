@@ -1,9 +1,6 @@
 package main
 
 import (
-	"context"
-	"errors"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -34,16 +31,16 @@ func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	from, err := time.Parse(time.DateOnly, query.Get("from"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "from must be YYYY-MM-DD")
+		writeError(w, http.StatusBadRequest, codeInvalidRange, "from must be YYYY-MM-DD")
 		return
 	}
 	to, err := time.Parse(time.DateOnly, query.Get("to"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "to must be YYYY-MM-DD")
+		writeError(w, http.StatusBadRequest, codeInvalidRange, "to must be YYYY-MM-DD")
 		return
 	}
 	if to.Before(from) {
-		writeError(w, http.StatusBadRequest, "to must not be before from")
+		writeError(w, http.StatusBadRequest, codeInvalidRange, "to must not be before from")
 		return
 	}
 	search := strings.TrimSpace(query.Get("q"))
@@ -57,17 +54,13 @@ func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
 		weeks = append(weeks, d.Format(time.DateOnly))
 	}
 	if len(weeks) > maxWeeks {
-		writeError(w, http.StatusBadRequest, "range is limited to 26 weeks")
+		writeError(w, http.StatusBadRequest, codeRangeTooLarge, "range is limited to 26 weeks")
 		return
 	}
 
 	var total int
 	if err := s.db.QueryRow(r.Context(), `SELECT count(*) FROM people`).Scan(&total); err != nil {
-		if errors.Is(err, context.Canceled) {
-			return
-		}
-		log.Printf("capacity total: %v", err)
-		writeError(w, http.StatusInternalServerError, "could not load capacity")
+		writeInternalError(w, r, "load capacity", err)
 		return
 	}
 
@@ -102,11 +95,7 @@ func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN allocated al ON al.person_id = m.id AND al.week_start = w.week_start
 		ORDER BY m.name, m.id, w.week_start`, from, to, search, overOnly)
 	if err != nil {
-		if errors.Is(err, context.Canceled) {
-			return
-		}
-		log.Printf("capacity query: %v", err)
-		writeError(w, http.StatusInternalServerError, "could not load capacity")
+		writeInternalError(w, r, "load capacity", err)
 		return
 	}
 	defer rows.Close()
@@ -117,8 +106,7 @@ func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
 		var name string
 		var weeklyHours, hours float64
 		if err := rows.Scan(&id, &name, &weeklyHours, &hours); err != nil {
-			log.Printf("capacity scan: %v", err)
-			writeError(w, http.StatusInternalServerError, "could not load capacity")
+			writeInternalError(w, r, "load capacity", err)
 			return
 		}
 		if len(people) == 0 || people[len(people)-1].ID != id {
@@ -128,11 +116,7 @@ func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
 		last.Allocated = append(last.Allocated, hours)
 	}
 	if err := rows.Err(); err != nil {
-		if errors.Is(err, context.Canceled) {
-			return
-		}
-		log.Printf("capacity rows: %v", err)
-		writeError(w, http.StatusInternalServerError, "could not load capacity")
+		writeInternalError(w, r, "load capacity", err)
 		return
 	}
 
