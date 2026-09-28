@@ -1,0 +1,2 @@
+printf 'root = true\n\n[*]\nend_of_line = lf\ninsert_final_newline = true\ncharset = utf-8\n' > .editorconfig
+cat .editorconfig
