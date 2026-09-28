@@ -12,4 +12,8 @@ export default tseslint.config(
     plugins: { 'react-hooks': reactHooks },
     rules: { ...reactHooks.configs.recommended.rules },
   },
+  {
+    files: ['src/hooks/useVirtualRows.ts'],
+    rules: { 'react-hooks/incompatible-library': 'off' },
+  },
 )

@@ -72,3 +72,4 @@ left unfinished. Append as you go; a line or two per entry is right.
 - week headers read "Dec 29" with the year when it changes, name column sticky, page opens on the current week
 - left alone: the 26-week limit is still in go and ts (a config endpoint for one number felt like too much), and the duplicate commits already on main
 - still not done: virtualization and pagination
+- turned off react-hooks/incompatible-library for useVirtualRows only. it warns about the react compiler memoizing useVirtualizer, and we don't use the compiler. measureElement passed to the memo row is stable

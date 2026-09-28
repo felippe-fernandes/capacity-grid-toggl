@@ -1,21 +1,18 @@
-import { CapacityInput } from './components/CapacityInput'
+import { ProgressBar } from './components/ui/ProgressBar'
+import { CapacityTable } from './components/table/CapacityTable'
+import { RefreshBanner, TableError } from './components/table/TableError'
+import { TableFooter } from './components/table/TableFooter'
+import { TableSkeleton } from './components/table/TableSkeleton'
 import { useCapacityPages } from './hooks/useCapacityPages'
-import { useInfiniteScroll } from './hooks/useInfiniteScroll'
-import { formatWeek } from './lib/dates'
 import type { Filters } from './lib/filters'
-import { status, type Status } from './lib/status'
+import { weeksInRange, type Range } from './lib/range'
 
 type Props = {
-  from: string
-  to: string
+  range: Range
+  rangeLabel: string
+  today: string
   filters: Filters
-}
-
-const cellStyles: Record<Status, string> = {
-  free: 'text-gray-400 dark:text-gray-600',
-  ok: '',
-  full: 'bg-amber-100 dark:bg-amber-900/40',
-  over: 'bg-red-100 font-semibold text-red-800 dark:bg-red-900/50 dark:text-red-200',
+  teamSize: number | undefined
 }
 
 // CapacityGrid renders one row per person and one column per week, showing
@@ -26,105 +23,42 @@ const cellStyles: Record<Status, string> = {
 //
 // A person's weekly hours are editable from the grid. After a save, every
 // number that depends on them must be right — without a full page reload.
-export function CapacityGrid({ from, to, filters }: Props) {
-  const {
-    people,
-    weeks,
-    matched,
-    isPending,
-    isFetching,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
-    error,
-    refetch,
-  } = useCapacityPages({ from, to }, filters)
-
-  const { rootRef, sentinelRef } = useInfiniteScroll({ hasNextPage, isFetchingNextPage, fetchNextPage })
-
-  if (isPending) {
-    return <p className="py-4 text-gray-500">Loading capacity…</p>
-  }
-
-  if (error && people.length === 0) {
-    return (
-      <div role="alert" className="py-4 text-red-700 dark:text-red-400">
-        <p>Could not load capacity: {error.message}</p>
-        <button onClick={() => refetch()} className="mt-2 rounded border border-current px-3 py-1">
-          Try again
-        </button>
-      </div>
-    )
-  }
+export function CapacityGrid({ range, rangeLabel, today, filters, teamSize }: Props) {
+  const capacity = useCapacityPages(range, filters)
+  const weeks = capacity.weeks.length > 0 ? capacity.weeks : weeksInRange(range)
+  const isRefreshing = capacity.isFetching && !capacity.isFetchingNextPage && !capacity.isPending
+  const retry = () => capacity.refetch()
 
   return (
-    <>
-      {error && (
-        <p role="alert" className="mb-2 text-sm text-red-700 dark:text-red-400">
-          Couldn't refresh, showing the last data we had.{' '}
-          <button onClick={() => refetch()} className="underline">
-            Try again
-          </button>
-        </p>
+    <section
+      aria-label="Capacity by person and week"
+      className="border-border bg-surface relative flex flex-col overflow-hidden rounded-xl border"
+    >
+      {isRefreshing && <ProgressBar />}
+
+      {capacity.isPending ? (
+        <TableSkeleton weeks={weeks} today={today} />
+      ) : capacity.error && capacity.people.length === 0 ? (
+        <TableError rangeLabel={rangeLabel} onRetry={retry} />
+      ) : (
+        <>
+          {capacity.error && <RefreshBanner onRetry={retry} />}
+          <CapacityTable
+            people={capacity.people}
+            weeks={weeks}
+            totals={capacity.totals}
+            matched={capacity.matched}
+            today={today}
+            rangeLabel={rangeLabel}
+            isRefreshing={isRefreshing}
+            hasNextPage={capacity.hasNextPage}
+            isFetchingNextPage={capacity.isFetchingNextPage}
+            fetchNextPage={capacity.fetchNextPage}
+          />
+        </>
       )}
-      <p className="mb-2 text-sm text-gray-500">
-        Showing {people.length} of {matched} people
-      </p>
-      <div
-        ref={rootRef}
-        aria-busy={isFetching}
-        className={`max-h-[75vh] overflow-auto rounded border border-gray-200 transition-opacity dark:border-gray-800 ${isFetching && !isFetchingNextPage ? 'opacity-50' : ''}`}
-      >
-        <table className="w-full border-collapse text-sm tabular-nums">
-          <thead className="sticky top-0 z-10 bg-[Canvas]">
-            <tr>
-              <th className="sticky left-0 z-20 bg-[Canvas] px-3 py-2 text-left font-medium">Person</th>
-              <th className="px-3 py-2 text-right font-medium">Capacity</th>
-              {weeks.map((week, i) => (
-                <th key={week} title={week} className="px-3 py-2 text-right font-medium whitespace-nowrap">
-                  {formatWeek(week)}
-                  {(i === 0 || week.slice(0, 4) !== weeks[i - 1].slice(0, 4)) && (
-                    <span className="block text-xs font-normal text-gray-500">{week.slice(0, 4)}</span>
-                  )}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {people.length === 0 && (
-              <tr>
-                <td colSpan={weeks.length + 2} className="px-3 py-6 text-center text-gray-500">
-                  No one matches these filters.
-                </td>
-              </tr>
-            )}
-            {people.map((person) => (
-              <tr key={person.id} className="border-t border-gray-200 dark:border-gray-800">
-                <th
-                  scope="row"
-                  className="sticky left-0 z-[1] bg-[Canvas] px-3 py-2 text-left font-normal whitespace-nowrap"
-                >
-                  {person.name}
-                </th>
-                <td className="px-3 py-2 text-right">
-                  <CapacityInput person={person} />
-                </td>
-                {person.allocated.map((hours, i) => (
-                  <td
-                    key={weeks[i]}
-                    className={`px-3 py-2 text-right whitespace-nowrap ${cellStyles[status(hours, person.weeklyHours)]}`}
-                  >
-                    {hours} / {person.weeklyHours}
-                    {hours > person.weeklyHours && <span className="ml-1 text-xs">+{hours - person.weeklyHours}h</span>}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div ref={sentinelRef} aria-hidden="true" />
-        {isFetchingNextPage && <p className="px-3 py-3 text-center text-sm text-gray-500">Loading more…</p>}
-      </div>
-    </>
+
+      <TableFooter matched={capacity.matched} teamSize={teamSize} />
+    </section>
   )
 }

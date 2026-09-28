@@ -8,7 +8,7 @@ import { useDateRange } from './hooks/useDateRange'
 import { useFilters } from './hooks/useFilters'
 
 export function App() {
-  const { range, label, previousWeek, nextWeek, thisWeek, setFrom, setTo } = useDateRange()
+  const { range, label, today, previousWeek, nextWeek, thisWeek, setFrom, setTo } = useDateRange()
   const { filters, setQuery, setOverOnly } = useFilters()
   const summary = useCapacitySummary(range)
 
@@ -36,7 +36,7 @@ export function App() {
         />
       </div>
 
-      <CapacityGrid from={range.from} to={range.to} filters={filters} />
+      <CapacityGrid range={range} rangeLabel={label} today={today} filters={filters} teamSize={summary.data?.people} />
     </main>
   )
 }
