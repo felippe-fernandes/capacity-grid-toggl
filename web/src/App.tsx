@@ -8,8 +8,8 @@ import {
   withFrom,
   withTo,
 } from './lib/range'
+import { DEFAULT_FILTERS, parseFilters, serializeFilters } from './lib/filters'
 import { useSearchParamsState } from './hooks/useSearchParamsState'
-
 
 const buttonClass =
   'rounded border border-gray-300 px-3 py-1 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800'
@@ -22,6 +22,7 @@ function today(): string {
 
 export function App() {
   const [range, setRange] = useSearchParamsState(parseRange, serializeRange, DEFAULT_RANGE)
+  const [filters, setFilters] = useSearchParamsState(parseFilters, serializeFilters, DEFAULT_FILTERS)
 
   function changeFrom(value: string) {
     if (value) setRange((r) => withFrom(r, value))
@@ -56,7 +57,26 @@ export function App() {
         </label>
       </div>
 
-      <CapacityGrid from={range.from} to={range.to} />
+      <div className="mb-4 flex flex-wrap items-center gap-4">
+        <input
+          type="search"
+          placeholder="Search people"
+          value={filters.q}
+          onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
+          aria-label="Search people"
+          className={inputClass}
+        />
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={filters.overOnly}
+            onChange={(e) => setFilters((f) => ({ ...f, overOnly: e.target.checked }))}
+          />
+          Only over-allocated
+        </label>
+      </div>
+
+      <CapacityGrid from={range.from} to={range.to} filters={filters} />
     </main>
   )
 }

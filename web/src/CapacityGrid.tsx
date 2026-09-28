@@ -1,13 +1,13 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { fetchCapacity } from './api/capacity'
 import { CapacityInput } from './components/CapacityInput'
+import { filterPeople, type Filters } from './lib/filters'
 import { status, type Status } from './lib/status'
-
-
 
 type Props = {
   from: string
   to: string
+  filters: Filters
 }
 
 const cellStyles: Record<Status, string> = {
@@ -25,7 +25,7 @@ const cellStyles: Record<Status, string> = {
 //
 // A person's weekly hours are editable from the grid. After a save, every
 // number that depends on them must be right — without a full page reload.
-export function CapacityGrid({ from, to }: Props) {
+export function CapacityGrid({ from, to, filters }: Props) {
   const { data, error, isPending, isFetching, refetch } = useQuery({
     queryKey: ['capacity', from, to],
     queryFn: ({ signal }) => fetchCapacity(from, to, signal),
@@ -47,45 +47,61 @@ export function CapacityGrid({ from, to }: Props) {
     )
   }
 
-  return (
-    <div
-      aria-busy={isFetching}
-      className={`max-h-[75vh] overflow-auto rounded border border-gray-200 transition-opacity dark:border-gray-800 ${isFetching ? 'opacity-50' : ''}`}
-    >
-      <table className="w-full border-collapse text-sm tabular-nums">
-        <thead className="sticky top-0 z-10 bg-[Canvas]">
-          <tr>
-            <th className="px-3 py-2 text-left font-medium">Person</th>
-            <th className="px-3 py-2 text-right font-medium">Capacity</th>
-            {data.weeks.map((week) => (
-              <th key={week} className="px-3 py-2 text-right font-medium whitespace-nowrap">
-                {week}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.people.map((person) => (
-            <tr key={person.id} className="border-t border-gray-200 dark:border-gray-800">
-              <th scope="row" className="px-3 py-2 text-left font-normal whitespace-nowrap">
-                {person.name}
-              </th>
-              <td className="px-3 py-2 text-right">
-                <CapacityInput person={person} />
-              </td>
+  const people = filterPeople(data.people, filters)
 
-              {person.allocated.map((hours, i) => (
-                <td
-                  key={data.weeks[i]}
-                  className={`px-3 py-2 text-right whitespace-nowrap ${cellStyles[status(hours, person.weeklyHours)]}`}
-                >
-                  {hours} / {person.weeklyHours}
-                </td>
+  return (
+    <>
+      <p className="mb-2 text-sm text-gray-500">
+        Showing {people.length} of {data.people.length} people
+      </p>
+      <div
+        aria-busy={isFetching}
+        className={`max-h-[75vh] overflow-auto rounded border border-gray-200 transition-opacity dark:border-gray-800 ${isFetching ? 'opacity-50' : ''}`}
+      >
+        <table className="w-full border-collapse text-sm tabular-nums">
+          <thead className="sticky top-0 z-10 bg-[Canvas]">
+            <tr>
+              <th className="px-3 py-2 text-left font-medium">Person</th>
+              <th className="px-3 py-2 text-right font-medium">Capacity</th>
+              {data.weeks.map((week) => (
+                <th key={week} className="px-3 py-2 text-right font-medium whitespace-nowrap">
+                  {week}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {people.length === 0 && (
+              <tr>
+                <td colSpan={data.weeks.length + 2} className="px-3 py-6 text-center text-gray-500">
+                  No one matches these filters.
+                </td>
+              </tr>
+            )}
+            {people.map((person) => (
+              <tr key={person.id} className="border-t border-gray-200 dark:border-gray-800">
+                <th scope="row" className="px-3 py-2 text-left font-normal whitespace-nowrap">
+                  {person.name}
+                </th>
+                <td className="px-3 py-2 text-right">
+                  <CapacityInput person={person} />
+                </td>
+                {person.allocated.map((hours, i) => (
+                  <td
+                    key={data.weeks[i]}
+                    className={`px-3 py-2 text-right whitespace-nowrap ${cellStyles[status(hours, person.weeklyHours)]}`}
+                  >
+                    {hours} / {person.weeklyHours}
+                    {hours > person.weeklyHours && (
+                      <span className="ml-1 text-xs">+{hours - person.weeklyHours}h</span>
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   )
 }
