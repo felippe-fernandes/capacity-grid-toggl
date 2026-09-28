@@ -7,8 +7,11 @@ function withWeeklyHours(data: CapacityData, id: number, weeklyHours: number): C
 
 export function useUpdateWeeklyHours(personId: number) {
   const queryClient = useQueryClient()
+  const mutationKey = ['weeklyHours', personId]
 
   return useMutation({
+    mutationKey,
+    scope: { id: `weeklyHours-${personId}` },
     mutationFn: (hours: number) => updateWeeklyHours(personId, hours),
     onMutate: async (hours) => {
       await queryClient.cancelQueries({ queryKey: ['capacity'] })
@@ -21,10 +24,10 @@ export function useUpdateWeeklyHours(personId: number) {
     onError: (_error, _hours, context) => {
       context?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data))
     },
-    onSuccess: (saved) => {
-      queryClient.setQueriesData<CapacityData>({ queryKey: ['capacity'] }, (data) =>
-        data ? withWeeklyHours(data, saved.id, saved.weeklyHours) : data,
-      )
+    onSettled: () => {
+      if (queryClient.isMutating({ mutationKey }) === 1) {
+        return queryClient.invalidateQueries({ queryKey: ['capacity'] })
+      }
     },
   })
 }
