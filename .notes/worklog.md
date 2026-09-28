@@ -32,3 +32,13 @@ left unfinished. Append as you go; a line or two per entry is right.
 - saw "context canceled" in api/db logs when changing range fast. that's the abort reaching postgres, working as intended. still logged as an error, could skip that
 - split src into api/ hooks/ lib/. App.tsx and CapacityGrid.tsx stay where the brief points
 - tests: url hook, range clamping, status rules (eli 20/0, dee 40/40). skipped dates.ts (covered through range) and the fetch client. saving effort for the edit flow
+- how editing works:
+  - capacity column is an input. enter or blur saves, esc cancels, same value or empty does nothing
+  - on save, every cached capacity range gets the new weeklyHours right away, so colours update before the server answers
+  - the old cache is kept. if the PATCH fails it's put back and the error shows under the input
+  - on success the value the server returned replaces the optimistic one
+  - no refetch after saving: allocated hours don't depend on weeklyHours, so patching the cache is enough
+- edit logic in hooks/useUpdateWeeklyHours, input ui in components/CapacityInput
+- api validates weeklyHours 0..168, 404 for unknown person. tested with curl + in the grid (-1 shows the error and rolls back)
+- editing capacity rewrites past weeks too, no dates on weekly_hours. would need a capacity_changes table with effective_from, schema is fixed
+- not done: two quick saves on the same person can race, no automated test for the edit flow
