@@ -13,7 +13,25 @@ export default defineConfig({
     },
   },
   test: {
-    environment: 'jsdom',
     passWithNoTests: true,
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          environment: 'node',
+          include: ['src/lib/**/*.test.ts', 'src/api/**/*.test.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'dom',
+          environment: 'jsdom',
+          include: ['src/hooks/**/*.test.{ts,tsx}', 'src/components/**/*.test.tsx'],
+          setupFiles: ['./src/test/setup.ts'],
+        },
+      },
+    ],
   },
 })

@@ -73,3 +73,5 @@ left unfinished. Append as you go; a line or two per entry is right.
 - left alone: the 26-week limit is still in go and ts (a config endpoint for one number felt like too much), and the duplicate commits already on main
 - still not done: virtualization and pagination
 - turned off react-hooks/incompatible-library for useVirtualRows only. it warns about the react compiler memoizing useVirtualizer, and we don't use the compiler. measureElement passed to the memo row is stable
+- vitest split in two projects: lib/ and api/ tests run in node, hooks/ and components/ in jsdom. jsdom was 64% of test time, and it also keeps lib/ honest about not touching the dom
+
