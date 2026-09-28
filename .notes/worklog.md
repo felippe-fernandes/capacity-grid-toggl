@@ -20,3 +20,4 @@ left unfinished. Append as you go; a line or two per entry is right.
 - eli nakamura has 0 weekly hours and 20h allocated, has to show as over
 - frontend: react query for server state (loading, errors, retries, cancelling old requests when the range changes)
 - no global store (zustand/redux). server data lives in the react query cache, the date range is local state in App
+- plain <table> for the grid. tanstack table felt like too much for fixed columns. with thousands of people i'd add row virtualization (tanstack virtual)
