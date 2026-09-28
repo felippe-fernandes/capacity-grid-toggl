@@ -63,7 +63,7 @@ export function CapacityGrid({ from, to, filters }: Props) {
         </p>
       )}
       <p className="mb-2 text-sm text-gray-500">
-        Showing {data.people.length} of {data.total} people
+        Showing {data.people.length} of {data.matched} people
       </p>
       <div
         aria-busy={isFetching}

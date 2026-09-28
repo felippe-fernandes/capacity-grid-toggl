@@ -7,7 +7,7 @@ import { useUpdateWeeklyHours } from './useUpdateWeeklyHours'
 
 const capacity = (weeklyHours: number): CapacityData => ({
   weeks: ['2026-01-05'],
-  total: 1,
+  matched: 1,
   people: [{ id: 4, name: 'Dee Okafor', weeklyHours, allocated: [45] }],
 })
 
