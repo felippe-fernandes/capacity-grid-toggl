@@ -1,3 +1,8 @@
+> **Note added after the deadline.** Everything below is what I submitted before the deadline, unchanged.
+> After submitting, I kept working on it in the [`refactor/after-deadline`](https://github.com/felippe-fernandes/capacity-grid-toggl/tree/refactor/after-deadline) branch
+> ([draft PR #1](https://github.com/felippe-fernandes/capacity-grid-toggl/pull/1)): server-side pagination and filters, Go and component tests, CI, and a new design.
+> This note, in `README.md`, `DECISIONS.md` and `.notes/worklog.md`, is the only change made to `main` after the deadline.
+
 # Capacity view
 
 Managers need to see who is over-committed before the week starts, not after. This is a
