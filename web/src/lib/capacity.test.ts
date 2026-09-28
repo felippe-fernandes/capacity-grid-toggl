@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import type { CapacityPage, PersonCapacity } from '../api/capacity'
-import { describeOverage, patchPersonInPages, rowOverage, teamLoadPercent } from './capacity'
+import {
+  cellLabel,
+  describeOverage,
+  formatHours,
+  loadPercent,
+  overageBadge,
+  patchPersonInPages,
+  rowOverage,
+  teamLoadPercent,
+} from './capacity'
 
 const person = (id: number, weeklyHours: number, allocated: number[]): PersonCapacity => ({
   id,
@@ -54,5 +63,41 @@ describe('teamLoadPercent', () => {
 
   it('has no percentage when there is no capacity', () => {
     expect(teamLoadPercent(0, 0)).toBeNull()
+  })
+})
+
+describe('formatHours', () => {
+  it('keeps whole hours and rounds fractions to one decimal', () => {
+    expect(formatHours(40)).toBe('40')
+    expect(formatHours(12.5)).toBe('12.5')
+    expect(formatHours(7.125)).toBe('7.1')
+  })
+})
+
+describe('loadPercent', () => {
+  it('fills the bar up to 100% and no further', () => {
+    expect(loadPercent(30, 40)).toBe(75)
+    expect(loadPercent(45, 40)).toBe(100)
+  })
+
+  it('handles zero capacity', () => {
+    expect(loadPercent(20, 0)).toBe(100)
+    expect(loadPercent(0, 0)).toBe(0)
+  })
+})
+
+describe('overageBadge', () => {
+  it('shows the extra hours, or names the zero-capacity case', () => {
+    expect(overageBadge(45, 40)).toBe('+5h')
+    expect(overageBadge(20, 0)).toBe('No capacity')
+  })
+})
+
+describe('cellLabel', () => {
+  it('reads as a sentence for tooltips and screen readers', () => {
+    expect(cellLabel('Dee Okafor', '2026-01-05', 45, 40)).toBe(
+      'Dee Okafor, week of Jan 5: 45h allocated of 40h (over by 5h)',
+    )
+    expect(cellLabel('Ana Ferreira', '2025-12-29', 30, 40)).toBe('Ana Ferreira, week of Dec 29: 30h allocated of 40h')
   })
 })

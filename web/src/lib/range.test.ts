@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defaultRange, normalizeRange, parseRange, shiftRange, withFrom, withTo } from './range'
+import { defaultRange, normalizeRange, parseRange, shiftRange, weeksInRange, withFrom, withTo } from './range'
 
 const params = (search: string) => new URLSearchParams(search)
 
@@ -66,5 +66,11 @@ describe('shiftRange', () => {
 describe('defaultRange', () => {
   it('starts on the current week and shows five weeks', () => {
     expect(defaultRange('2026-09-30')).toEqual({ from: '2026-09-28', to: '2026-11-01' })
+  })
+})
+
+describe('weeksInRange', () => {
+  it('lists the Monday of every week in the range', () => {
+    expect(weeksInRange({ from: '2025-12-29', to: '2026-01-18' })).toEqual(['2025-12-29', '2026-01-05', '2026-01-12'])
   })
 })

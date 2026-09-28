@@ -49,6 +49,12 @@ export function rangeStartingAt(range: Range, day: string): Range {
   return { from, to: addDays(from, daysBetween(range.from, range.to)) }
 }
 
+export function weeksInRange({ from, to }: Range): string[] {
+  const weeks: string[] = []
+  for (let week = mondayOf(from); week <= to; week = addDays(week, 7)) weeks.push(week)
+  return weeks
+}
+
 export function parseRange(params: URLSearchParams): Range | null {
   const parsed = rangeSchema.safeParse({ from: params.get('from'), to: params.get('to') })
   return parsed.success ? normalizeRange(parsed.data) : null
