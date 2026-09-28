@@ -21,3 +21,14 @@ left unfinished. Append as you go; a line or two per entry is right.
 - frontend: react query for server state (loading, errors, retries, cancelling old requests when the range changes)
 - no global store (zustand/redux). server data lives in the react query cache, the date range is local state in App
 - plain <table> for the grid. tanstack table felt like too much for fixed columns. with thousands of people i'd add row virtualization (tanstack virtual)
+- vite hmr didn't pick up changes on windows + docker, turned on usePolling in vite.config
+- no hot reload for go without touching dockerfile/compose, rebuilding only the api container instead
+- tailwind for styling, it's what i use day to day. plain css would've been enough here
+- zod on the api response and url params. not for env, frontend has none
+- range lives in the url via a small useSearchParamsState hook, no lib (nuqs wants a router)
+- replaceState not pushState, arrows would flood the back button otherwise
+- bad url: invalid dates -> default range, weird but valid -> same fixes as the inputs, url rewritten
+- update on the "no global store" line: range ended up in the url, not in App state. still no store
+- saw "context canceled" in api/db logs when changing range fast. that's the abort reaching postgres, working as intended. still logged as an error, could skip that
+- split src into api/ hooks/ lib/. App.tsx and CapacityGrid.tsx stay where the brief points
+- tests: url hook, range clamping, status rules (eli 20/0, dee 40/40). skipped dates.ts (covered through range) and the fetch client. saving effort for the edit flow
