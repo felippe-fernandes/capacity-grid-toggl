@@ -3,8 +3,6 @@ import { fetchCapacity } from './api/capacity'
 import { CapacityInput } from './components/CapacityInput'
 import { status, type Status } from './lib/status'
 
-
-
 type Props = {
   from: string
   to: string
@@ -73,13 +71,15 @@ export function CapacityGrid({ from, to }: Props) {
               <td className="px-3 py-2 text-right">
                 <CapacityInput person={person} />
               </td>
-
               {person.allocated.map((hours, i) => (
                 <td
                   key={data.weeks[i]}
                   className={`px-3 py-2 text-right whitespace-nowrap ${cellStyles[status(hours, person.weeklyHours)]}`}
                 >
                   {hours} / {person.weeklyHours}
+                  {hours > person.weeklyHours && (
+                    <span className="ml-1 text-xs">+{hours - person.weeklyHours}h</span>
+                  )}
                 </td>
               ))}
             </tr>
