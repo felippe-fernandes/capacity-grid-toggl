@@ -6,25 +6,22 @@ import (
 	"time"
 )
 
-// Keeps a single request bounded; rosters in production are large.
 const maxWeeks = 26
 
 type personCapacity struct {
 	ID          int       `json:"id"`
 	Name        string    `json:"name"`
 	WeeklyHours float64   `json:"weeklyHours"`
-	Allocated   []float64 `json:"allocated"` // one entry per week, same order as weeks
+	Allocated   []float64 `json:"allocated"`
 }
 
 type capacityResponse struct {
-	Weeks  []string         `json:"weeks"` // Monday of each week
+	Weeks  []string         `json:"weeks"`
 	People []personCapacity `json:"people"`
 }
 
 // handleCapacity serves GET /api/capacity?from=YYYY-MM-DD&to=YYYY-MM-DD
 //
-// The range is widened to whole weeks (Monday to Sunday). Allocated hours
-// count weekdays only.
 func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
 	from, err := time.Parse(time.DateOnly, r.URL.Query().Get("from"))
 	if err != nil {
@@ -81,7 +78,6 @@ func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	// Rows come ordered by person, then week, so each person's weeks are consecutive.
 	people := []personCapacity{}
 	for rows.Next() {
 		var id int
@@ -108,6 +104,6 @@ func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
 }
 
 func mondayOf(t time.Time) time.Time {
-	offset := (int(t.Weekday()) + 6) % 7 // Monday=0 ... Sunday=6
+	offset := (int(t.Weekday()) + 6) % 7
 	return t.AddDate(0, 0, -offset)
 }
