@@ -29,3 +29,7 @@ export function patchPersonInPages<T extends { pages: CapacityPage[] }>(data: T,
     ),
   }
 }
+
+export function teamLoadPercent(allocatedHours: number, capacityHours: number): number | null {
+  return capacityHours > 0 ? Math.round((allocatedHours / capacityHours) * 100) : null
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CapacityPage, PersonCapacity } from '../api/capacity'
-import { describeOverage, patchPersonInPages, rowOverage } from './capacity'
+import { describeOverage, patchPersonInPages, rowOverage, teamLoadPercent } from './capacity'
 
 const person = (id: number, weeklyHours: number, allocated: number[]): PersonCapacity => ({
   id,
@@ -44,5 +44,15 @@ describe('patchPersonInPages', () => {
     expect(patched.pages[0].people[0]).toBe(pages[0].people[0])
     expect(patched.pages[1]).toBe(pages[1])
     expect(patched.pageParams).toBe(data.pageParams)
+  })
+})
+
+describe('teamLoadPercent', () => {
+  it('rounds allocated against capacity', () => {
+    expect(teamLoadPercent(11225, 52149)).toBe(22)
+  })
+
+  it('has no percentage when there is no capacity', () => {
+    expect(teamLoadPercent(0, 0)).toBeNull()
   })
 })

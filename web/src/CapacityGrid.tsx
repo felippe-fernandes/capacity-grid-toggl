@@ -1,5 +1,6 @@
 import { CapacityInput } from './components/CapacityInput'
 import { useCapacityPages } from './hooks/useCapacityPages'
+import { useInfiniteScroll } from './hooks/useInfiniteScroll'
 import { formatWeek } from './lib/dates'
 import type { Filters } from './lib/filters'
 import { status, type Status } from './lib/status'
@@ -39,6 +40,8 @@ export function CapacityGrid({ from, to, filters }: Props) {
     refetch,
   } = useCapacityPages({ from, to }, filters)
 
+  const { rootRef, sentinelRef } = useInfiniteScroll({ hasNextPage, isFetchingNextPage, fetchNextPage })
+
   if (isPending) {
     return <p className="py-4 text-gray-500">Loading capacity…</p>
   }
@@ -68,6 +71,7 @@ export function CapacityGrid({ from, to, filters }: Props) {
         Showing {people.length} of {matched} people
       </p>
       <div
+        ref={rootRef}
         aria-busy={isFetching}
         className={`max-h-[75vh] overflow-auto rounded border border-gray-200 transition-opacity dark:border-gray-800 ${isFetching && !isFetchingNextPage ? 'opacity-50' : ''}`}
       >
@@ -118,16 +122,9 @@ export function CapacityGrid({ from, to, filters }: Props) {
             ))}
           </tbody>
         </table>
+        <div ref={sentinelRef} aria-hidden="true" />
+        {isFetchingNextPage && <p className="px-3 py-3 text-center text-sm text-gray-500">Loading more…</p>}
       </div>
-      {hasNextPage && (
-        <button
-          onClick={() => fetchNextPage()}
-          disabled={isFetchingNextPage}
-          className="mt-2 rounded border border-gray-300 px-3 py-1 dark:border-gray-700"
-        >
-          {isFetchingNextPage ? 'Loading…' : 'Load more'}
-        </button>
-      )}
     </>
   )
 }
