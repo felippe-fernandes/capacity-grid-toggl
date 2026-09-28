@@ -28,3 +28,18 @@ export async function fetchCapacity(from: string, to: string, signal: AbortSigna
   }
   return parsed.data
 }
+
+const personSchema = z.object({ id: z.number(), name: z.string(), weeklyHours: z.number() })
+
+export async function updateWeeklyHours(id: number, weeklyHours: number) {
+  const res = await fetch(`/api/people/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ weeklyHours }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    throw new Error(body?.error ?? `Save failed (${res.status})`)
+  }
+  return personSchema.parse(await res.json())
+}

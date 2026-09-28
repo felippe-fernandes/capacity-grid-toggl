@@ -1,6 +1,8 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { fetchCapacity } from './api/capacity'
+import { CapacityInput } from './components/CapacityInput'
 import { status, type Status } from './lib/status'
+
 
 
 type Props = {
@@ -68,7 +70,10 @@ export function CapacityGrid({ from, to }: Props) {
               <th scope="row" className="px-3 py-2 text-left font-normal whitespace-nowrap">
                 {person.name}
               </th>
-              <td className="px-3 py-2 text-right">{person.weeklyHours}h</td>
+              <td className="px-3 py-2 text-right">
+                <CapacityInput person={person} />
+              </td>
+
               {person.allocated.map((hours, i) => (
                 <td
                   key={data.weeks[i]}
