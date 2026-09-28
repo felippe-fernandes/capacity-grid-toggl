@@ -1,56 +1,33 @@
-import { useState } from 'react'
 import { CapacityGrid } from './CapacityGrid'
-import { addDays, daysBetween, mondayOf } from './capacity'
-
-const MAX_DAYS = 26 * 7
+import {
+  DEFAULT_RANGE,
+  parseRange,
+  rangeStartingAt,
+  serializeRange,
+  shiftRange,
+  withFrom,
+  withTo,
+} from './range'
+import { useSearchParamsState } from './useSearchParamsState'
 
 const buttonClass =
   'rounded border border-gray-300 px-3 py-1 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800'
 
 const inputClass = 'rounded border border-gray-300 px-2 py-1 dark:border-gray-700'
 
-type Range = { from: string; to: string }
-
-function sundayOf(iso: string): string {
-  return addDays(mondayOf(iso), 6)
-}
-
 function today(): string {
   return new Date().toLocaleDateString('en-CA')
 }
 
 export function App() {
-  const [range, setRange] = useState<Range>({ from: '2025-12-29', to: '2026-01-18' })
-
-  function shiftWeeks(weeks: number) {
-    setRange((r) => ({ from: addDays(r.from, weeks * 7), to: addDays(r.to, weeks * 7) }))
-  }
-
-  function goToThisWeek() {
-    setRange((r) => {
-      const from = mondayOf(today())
-      return { from, to: addDays(from, daysBetween(r.from, r.to)) }
-    })
-  }
+  const [range, setRange] = useSearchParamsState(parseRange, serializeRange, DEFAULT_RANGE)
 
   function changeFrom(value: string) {
-    if (!value) return
-    setRange((r) => {
-      const from = mondayOf(value)
-      let to = r.to < from ? sundayOf(from) : r.to
-      if (daysBetween(from, to) >= MAX_DAYS) to = addDays(from, MAX_DAYS - 1)
-      return { from, to }
-    })
+    if (value) setRange((r) => withFrom(r, value))
   }
 
   function changeTo(value: string) {
-    if (!value) return
-    setRange((r) => {
-      const to = sundayOf(value)
-      let from = r.from > to ? mondayOf(to) : r.from
-      if (daysBetween(from, to) >= MAX_DAYS) from = addDays(to, -(MAX_DAYS - 1))
-      return { from, to }
-    })
+    if (value) setRange((r) => withTo(r, value))
   }
 
   return (
@@ -58,13 +35,13 @@ export function App() {
       <h1 className="mb-4 text-2xl font-semibold">Team capacity</h1>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <button className={buttonClass} onClick={() => shiftWeeks(-1)} aria-label="Previous week">
+        <button className={buttonClass} onClick={() => setRange((r) => shiftRange(r, -1))} aria-label="Previous week">
           ←
         </button>
-        <button className={buttonClass} onClick={goToThisWeek}>
+        <button className={buttonClass} onClick={() => setRange((r) => rangeStartingAt(r, today()))}>
           This week
         </button>
-        <button className={buttonClass} onClick={() => shiftWeeks(1)} aria-label="Next week">
+        <button className={buttonClass} onClick={() => setRange((r) => shiftRange(r, 1))} aria-label="Next week">
           →
         </button>
 
