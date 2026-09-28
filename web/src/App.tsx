@@ -1,82 +1,42 @@
 import { CapacityGrid } from './CapacityGrid'
-import {
-  DEFAULT_RANGE,
-  parseRange,
-  rangeStartingAt,
-  serializeRange,
-  shiftRange,
-  withFrom,
-  withTo,
-} from './lib/range'
-import { DEFAULT_FILTERS, parseFilters, serializeFilters } from './lib/filters'
-import { useSearchParamsState } from './hooks/useSearchParamsState'
-
-const buttonClass =
-  'rounded border border-gray-300 px-3 py-1 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800'
-
-const inputClass = 'rounded border border-gray-300 px-2 py-1 dark:border-gray-700'
-
-function today(): string {
-  return new Date().toLocaleDateString('en-CA')
-}
+import { FiltersBar } from './components/FiltersBar'
+import { PageHeader } from './components/PageHeader'
+import { RangeToolbar } from './components/RangeToolbar'
+import { SummaryStats } from './components/SummaryStats'
+import { useCapacitySummary } from './hooks/useCapacitySummary'
+import { useDateRange } from './hooks/useDateRange'
+import { useFilters } from './hooks/useFilters'
 
 export function App() {
-  const [range, setRange] = useSearchParamsState(parseRange, serializeRange, DEFAULT_RANGE)
-  const [filters, setFilters] = useSearchParamsState(parseFilters, serializeFilters, DEFAULT_FILTERS)
-
-  function changeFrom(value: string) {
-    if (value) setRange((r) => withFrom(r, value))
-  }
-
-  function changeTo(value: string) {
-    if (value) setRange((r) => withTo(r, value))
-  }
+  const { range, label, today, previousWeek, nextWeek, thisWeek, setFrom, setTo } = useDateRange()
+  const { filters, setQuery, setOverOnly } = useFilters()
+  const summary = useCapacitySummary(range)
 
   return (
-    <main className="p-8">
-      <h1 className="mb-4 text-2xl font-semibold">Team capacity</h1>
+    <main className="mx-auto flex max-w-[1440px] flex-col gap-6 px-10 py-9">
+      <PageHeader rangeLabel={label}>
+        <SummaryStats summary={summary.data} />
+      </PageHeader>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <button className={buttonClass} onClick={() => setRange((r) => shiftRange(r, -1))} aria-label="Previous week">
-          ←
-        </button>
-        <button className={buttonClass} onClick={() => setRange((r) => rangeStartingAt(r, today()))}>
-          This week
-        </button>
-        <button className={buttonClass} onClick={() => setRange((r) => shiftRange(r, 1))} aria-label="Next week">
-          →
-        </button>
-
-        <label className="ml-4 flex items-center gap-2">
-          From
-          <input type="date" value={range.from} onChange={(e) => changeFrom(e.target.value)} className={inputClass} />
-        </label>
-        <label className="flex items-center gap-2">
-          To
-          <input type="date" value={range.to} onChange={(e) => changeTo(e.target.value)} className={inputClass} />
-        </label>
-      </div>
-
-      <div className="mb-4 flex flex-wrap items-center gap-4">
-        <input
-          type="search"
-          placeholder="Search people"
-          value={filters.q}
-          onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
-          aria-label="Search people"
-          className={inputClass}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <RangeToolbar
+          from={range.from}
+          to={range.to}
+          onPrevious={previousWeek}
+          onNext={nextWeek}
+          onThisWeek={thisWeek}
+          onFromChange={setFrom}
+          onToChange={setTo}
         />
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={filters.overOnly}
-            onChange={(e) => setFilters((f) => ({ ...f, overOnly: e.target.checked }))}
-          />
-          Only over-allocated
-        </label>
+        <FiltersBar
+          query={filters.q}
+          overOnly={filters.overOnly}
+          onQueryChange={setQuery}
+          onOverOnlyChange={setOverOnly}
+        />
       </div>
 
-      <CapacityGrid from={range.from} to={range.to} filters={filters} />
+      <CapacityGrid range={range} rangeLabel={label} today={today} filters={filters} teamSize={summary.data?.people} />
     </main>
   )
 }

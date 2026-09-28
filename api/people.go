@@ -3,21 +3,20 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"log"
+	"fmt"
+	"math"
 	"net/http"
 	"strconv"
-
-	"github.com/jackc/pgx/v5"
 )
 
 type updatePersonRequest struct {
-	WeeklyHours *float64 `json:"weeklyHours"`
+	WeeklyHours         *float64 `json:"weeklyHours"`
+	ExpectedWeeklyHours *float64 `json:"expectedWeeklyHours"`
 }
 
-type personResponse struct {
-	ID          int     `json:"id"`
-	Name        string  `json:"name"`
-	WeeklyHours float64 `json:"weeklyHours"`
+type conflictBody struct {
+	Error   apiError       `json:"error"`
+	Current personResponse `json:"current"`
 }
 
 // handleUpdatePerson serves PATCH /api/people/{id}
@@ -27,33 +26,41 @@ type personResponse struct {
 func (s *server) handleUpdatePerson(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid person id")
-		return
-	}
-	var req updatePersonRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.WeeklyHours == nil {
-		writeError(w, http.StatusBadRequest, "weeklyHours is required")
-		return
-	}
-	hours := *req.WeeklyHours
-	if hours < 0 || hours > 168 {
-		writeError(w, http.StatusBadRequest, "weeklyHours must be between 0 and 168")
+		writeError(w, http.StatusBadRequest, codeInvalidID, "invalid person id")
 		return
 	}
 
-	var p personResponse
-	err = s.db.QueryRow(r.Context(),
-		`UPDATE people SET weekly_hours = $1 WHERE id = $2 RETURNING id, name, weekly_hours::float8`,
-		hours, id,
-	).Scan(&p.ID, &p.Name, &p.WeeklyHours)
-	if errors.Is(err, pgx.ErrNoRows) {
-		writeError(w, http.StatusNotFound, "person not found")
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<10)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	var req updatePersonRequest
+	if err := decoder.Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, codeInvalidBody, `body must be JSON like {"weeklyHours": 32}`)
 		return
 	}
-	if err != nil {
-		log.Printf("update person: %v", err)
-		writeError(w, http.StatusInternalServerError, "could not save weekly hours")
+	if req.WeeklyHours == nil {
+		writeError(w, http.StatusBadRequest, codeInvalidBody, "weeklyHours is required")
 		return
 	}
-	writeJSON(w, http.StatusOK, p)
+	hours := *req.WeeklyHours
+	if hours != math.Trunc(hours) || hours < minWeeklyHours || hours > maxWeeklyHours {
+		writeError(w, http.StatusBadRequest, codeInvalidHours,
+			fmt.Sprintf("weekly hours must be a whole number from %d to %d", minWeeklyHours, maxWeeklyHours))
+		return
+	}
+
+	p, err := updateWeeklyHours(r.Context(), s.db, id, int(hours), req.ExpectedWeeklyHours)
+	switch {
+	case errors.Is(err, errPersonNotFound):
+		writeError(w, http.StatusNotFound, codeNotFound, "person not found")
+	case errors.Is(err, errStaleCapacity):
+		writeJSON(w, http.StatusConflict, conflictBody{
+			Error:   apiError{Code: codeConflict, Message: "weekly hours changed since you loaded them"},
+			Current: p,
+		})
+	case err != nil:
+		writeInternalError(w, r, "save weekly hours", err)
+	default:
+		writeJSON(w, http.StatusOK, p)
+	}
 }

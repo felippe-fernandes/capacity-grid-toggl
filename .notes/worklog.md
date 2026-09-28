@@ -1,3 +1,7 @@
+> **This branch was made after the deadline.** `main` is what I submitted. Everything here
+> is follow-up work from reviewing my own submission, and it is not part of the assessment.
+
+
 # Worklog
 
 Running notes on how this got built — decisions, assumptions, dead ends, and anything
@@ -49,3 +53,28 @@ left unfinished. Append as you go; a line or two per entry is right.
 - no zod on filters, any url value maps to a valid filter (text is a search, anything but over=1 is off)
 - with "only over-allocated" on, a person disappears as soon as you fix their capacity. makes sense but could surprise someone, left as is
 - tests: filterPeople, parse/serialize filters, empty param removal in the hook. 28 passing
+
+
+## after the deadline (branch refactor/after-deadline, main is the submission)
+
+- reviewed my own submission as a senior fullstack would, fixed what i found here
+- filters moved to the api: `q` uses position(lower()) so % and _ are plain text, `over=1` uses EXISTS on the allocated cte. api also returns `total`
+- frontend no longer filters, it only asks. search waits 300ms after typing stops, one request instead of one per letter
+- go tests against the seed: weekends, weekend-crossing assignment, fragmented rows summed, eli with 0 capacity, filters, bad input, PATCH saves and restores eli after
+- capacity_test.go got committed after people_test.go, which uses its helpers. the api builds at every commit, `go test` only passes from that commit on
+- PATCH: 1kb body limit, unknown fields rejected. /health stopped sending db errors to the client
+- edit flow: draft stays when a save fails, with retry and discard. human messages instead of the api field names. zod checks 0..168 before sending
+- saves for the same person go in a queue (react query mutation scope), so an old response can't land after a newer one
+- after the last successful save the visible range is refetched from the server. was "no refetch" before, changed because a cancelled fetch was never retried
+- found while testing with the api stopped: a failed save triggered a refetch, which also failed and replaced the whole grid with an error. now it only refetches on success, and a failed refetch keeps the table with a banner on top
+- the draft isn't overwritten while the input has focus
+- test for the edit hook: optimistic update on every cached range, rollback, network error message, save queue
+- week headers read "Dec 29" with the year when it changes, name column sticky, page opens on the current week
+- left alone: the 26-week limit is still in go and ts (a config endpoint for one number felt like too much), and the duplicate commits already on main
+- still not done: virtualization and pagination
+- turned off react-hooks/incompatible-library for useVirtualRows only. it warns about the react compiler memoizing useVirtualizer, and we don't use the compiler. measureElement passed to the memo row is stable
+- vitest split in two projects: lib/ and api/ tests run in node, hooks/ and components/ in jsdom. jsdom was 64% of test time, and it also keeps lib/ honest about not touching the dom
+- measured, 26 weeks, first page: api answers in ~270ms. the day-by-day allocation join is ~105ms of that
+- explain: the (start_date, end_date) index is used, but once per workday (130 loops x ~2000 rows = ~263k day/assignment pairs). cost grows with days x assignments
+- would fix: join assignments to weeks and count overlapping weekdays per week (5x fewer pairs), a gist index on daterange(start_date, end_date) (schema change), and in production a precomputed weekly allocation table
+

@@ -20,3 +20,24 @@ export function mondayOf(iso: string): string {
 export function daysBetween(from: string, to: string): number {
   return Math.round((toDate(to).getTime() - toDate(from).getTime()) / DAY_MS)
 }
+
+const weekLabel = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+
+export function formatWeek(iso: string): string {
+  return weekLabel.format(toDate(iso))
+}
+
+export function formatRangeLabel(from: string, to: string): string {
+  const fromYear = from.slice(0, 4)
+  const toYear = to.slice(0, 4)
+  const start = fromYear === toYear ? formatWeek(from) : `${formatWeek(from)}, ${fromYear}`
+  return `${start} – ${formatWeek(to)}, ${toYear}`
+}
+
+export function weekSpanLabel(monday: string): string {
+  return formatRangeLabel(monday, addDays(monday, 6))
+}
+
+export function isCurrentWeek(monday: string, today: string): boolean {
+  return mondayOf(today) === monday
+}

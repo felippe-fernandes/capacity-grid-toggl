@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeRange, parseRange, shiftRange, withFrom, withTo } from './range'
+import { defaultRange, normalizeRange, parseRange, shiftRange, weeksInRange, withFrom, withTo } from './range'
 
 const params = (search: string) => new URLSearchParams(search)
 
@@ -27,26 +27,50 @@ describe('normalizeRange', () => {
 
 describe('withFrom', () => {
   it('pushes to forward when from moves past it', () => {
-    expect(withFrom({ from: '2026-01-05', to: '2026-01-18' }, '2026-02-04')).toEqual({ from: '2026-02-02', to: '2026-02-08' })
+    expect(withFrom({ from: '2026-01-05', to: '2026-01-18' }, '2026-02-04')).toEqual({
+      from: '2026-02-02',
+      to: '2026-02-08',
+    })
   })
 
   it('pulls to back to stay within 26 weeks', () => {
-    expect(withFrom({ from: '2026-01-05', to: '2026-07-05' }, '2025-12-01')).toEqual({ from: '2025-12-01', to: '2026-05-31' })
+    expect(withFrom({ from: '2026-01-05', to: '2026-07-05' }, '2025-12-01')).toEqual({
+      from: '2025-12-01',
+      to: '2026-05-31',
+    })
   })
 })
 
 describe('withTo', () => {
   it('pulls from back when to moves before it', () => {
-    expect(withTo({ from: '2026-01-05', to: '2026-01-18' }, '2025-12-24')).toEqual({ from: '2025-12-22', to: '2025-12-28' })
+    expect(withTo({ from: '2026-01-05', to: '2026-01-18' }, '2025-12-24')).toEqual({
+      from: '2025-12-22',
+      to: '2025-12-28',
+    })
   })
 
   it('pushes from forward to stay within 26 weeks', () => {
-    expect(withTo({ from: '2026-01-05', to: '2026-01-18' }, '2027-01-01')).toEqual({ from: '2026-07-06', to: '2027-01-03' })
+    expect(withTo({ from: '2026-01-05', to: '2026-01-18' }, '2027-01-01')).toEqual({
+      from: '2026-07-06',
+      to: '2027-01-03',
+    })
   })
 })
 
 describe('shiftRange', () => {
   it('moves both ends by whole weeks across a year boundary', () => {
     expect(shiftRange({ from: '2025-12-29', to: '2026-01-18' }, -1)).toEqual({ from: '2025-12-22', to: '2026-01-11' })
+  })
+})
+
+describe('defaultRange', () => {
+  it('starts on the current week and shows five weeks', () => {
+    expect(defaultRange('2026-09-30')).toEqual({ from: '2026-09-28', to: '2026-11-01' })
+  })
+})
+
+describe('weeksInRange', () => {
+  it('lists the Monday of every week in the range', () => {
+    expect(weeksInRange({ from: '2025-12-29', to: '2026-01-18' })).toEqual(['2025-12-29', '2026-01-05', '2026-01-12'])
   })
 })

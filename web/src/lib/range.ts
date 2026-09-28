@@ -1,7 +1,6 @@
 import { z } from 'zod'
 import { addDays, daysBetween, mondayOf } from './dates'
 
-
 const MAX_DAYS = 26 * 7
 
 const rangeSchema = z.object({
@@ -11,7 +10,10 @@ const rangeSchema = z.object({
 
 export type Range = z.infer<typeof rangeSchema>
 
-export const DEFAULT_RANGE: Range = { from: '2025-12-29', to: '2026-01-18' }
+export function defaultRange(today: string): Range {
+  const from = mondayOf(today)
+  return { from, to: addDays(from, 34) }
+}
 
 function sundayOf(iso: string): string {
   return addDays(mondayOf(iso), 6)
@@ -45,6 +47,12 @@ export function shiftRange(range: Range, weeks: number): Range {
 export function rangeStartingAt(range: Range, day: string): Range {
   const from = mondayOf(day)
   return { from, to: addDays(from, daysBetween(range.from, range.to)) }
+}
+
+export function weeksInRange({ from, to }: Range): string[] {
+  const weeks: string[] = []
+  for (let week = mondayOf(from); week <= to; week = addDays(week, 7)) weeks.push(week)
+  return weeks
 }
 
 export function parseRange(params: URLSearchParams): Range | null {

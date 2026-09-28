@@ -1,3 +1,6 @@
+> **This branch was made after the deadline.** `main` is what I submitted. Everything here
+> is follow-up work from reviewing my own submission, and it is not part of the assessment.
+
 # Decisions
 
 ## What did the spec not tell you?
@@ -65,3 +68,22 @@
 - Cells over capacity show how much over they are (+5h), so the manager doesn't do the math.
 - Filters: search by name and "only over-allocated", kept in the URL with the same hook as
   the date range. They run in the browser, which is fine for 500 people.
+
+
+## After the deadline (this branch only)
+
+- Filters moved to the API, so the browser never gets people it won't show. The search waits
+  for the manager to stop typing.
+- Saving is now optimistic and then confirmed: the new value shows straight away, and once the
+  last save for that person succeeds the visible range is refetched. Saves for the same person
+  run one at a time, so an older response can't overwrite a newer edit.
+- A failed save keeps what the manager typed, with Retry and Discard and a plain message.
+  Input is checked before it's sent.
+- A failed refresh keeps the last data on screen instead of replacing the grid with an error.
+  I found this by stopping the API while testing.
+- Go tests now run the capacity query against the seed, and the edit hook has its own test.
+- Still to do: virtualization and pagination for the real roster size.
+- Measured instead of guessing: the first page for 26 weeks takes about 270ms, and about 105ms of
+  that is expanding every assignment into working days. The date index is used, but once per day.
+  Next I'd count overlapping weekdays per week instead of per day, add a GiST index on the date
+  range (needs a schema change), and in production keep a weekly allocation table up to date.

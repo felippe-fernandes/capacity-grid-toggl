@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { request } from './client'
 
 const personCapacitySchema = z.object({
   id: z.number(),
@@ -7,39 +8,39 @@ const personCapacitySchema = z.object({
   allocated: z.array(z.number()),
 })
 
-const capacityDataSchema = z.object({
+const weekTotalSchema = z.object({ allocated: z.number(), capacity: z.number() })
+
+const capacityPageSchema = z.object({
   weeks: z.array(z.iso.date()),
   people: z.array(personCapacitySchema),
+  matched: z.number().optional(),
+  totals: z.array(weekTotalSchema).optional(),
+  nextCursor: z.string().optional(),
+})
+
+const summarySchema = z.object({
+  people: z.number(),
+  overPeople: z.number(),
+  fullPeople: z.number(),
+  allocatedHours: z.number(),
+  capacityHours: z.number(),
 })
 
 export type PersonCapacity = z.infer<typeof personCapacitySchema>
-export type CapacityData = z.infer<typeof capacityDataSchema>
+export type WeekTotal = z.infer<typeof weekTotalSchema>
+export type CapacityPage = z.infer<typeof capacityPageSchema>
+export type CapacitySummary = z.infer<typeof summarySchema>
 
-export async function fetchCapacity(from: string, to: string, signal: AbortSignal): Promise<CapacityData> {
-  const res = await fetch(`/api/capacity?from=${from}&to=${to}`, { signal })
-  if (!res.ok) {
-    const body = await res.json().catch(() => null)
-    throw new Error(body?.error ?? `Request failed (${res.status})`)
-  }
-  const parsed = capacityDataSchema.safeParse(await res.json())
-  if (!parsed.success) {
-    console.error(parsed.error)
-    throw new Error('Unexpected response from the server')
-  }
-  return parsed.data
+export type CapacityQuery = { from: string; to: string; q: string; overOnly: boolean }
+
+export function fetchCapacityPage(query: CapacityQuery, cursor: string | undefined, signal: AbortSignal) {
+  const params = new URLSearchParams({ from: query.from, to: query.to })
+  if (query.q) params.set('q', query.q)
+  if (query.overOnly) params.set('over', '1')
+  if (cursor) params.set('cursor', cursor)
+  return request(`/api/capacity?${params}`, capacityPageSchema, { signal })
 }
 
-const personSchema = z.object({ id: z.number(), name: z.string(), weeklyHours: z.number() })
-
-export async function updateWeeklyHours(id: number, weeklyHours: number) {
-  const res = await fetch(`/api/people/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ weeklyHours }),
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => null)
-    throw new Error(body?.error ?? `Save failed (${res.status})`)
-  }
-  return personSchema.parse(await res.json())
+export function fetchSummary(from: string, to: string, signal: AbortSignal) {
+  return request(`/api/capacity/summary?${new URLSearchParams({ from, to })}`, summarySchema, { signal })
 }
