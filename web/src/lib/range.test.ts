@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeRange, parseRange, shiftRange, withFrom, withTo } from './range'
+import { defaultRange, normalizeRange, parseRange, shiftRange, withFrom, withTo } from './range'
 
 const params = (search: string) => new URLSearchParams(search)
 
@@ -48,5 +48,11 @@ describe('withTo', () => {
 describe('shiftRange', () => {
   it('moves both ends by whole weeks across a year boundary', () => {
     expect(shiftRange({ from: '2025-12-29', to: '2026-01-18' }, -1)).toEqual({ from: '2025-12-22', to: '2026-01-11' })
+  })
+})
+
+describe('defaultRange', () => {
+  it('starts on the current week and shows three weeks', () => {
+    expect(defaultRange('2026-09-30')).toEqual({ from: '2026-09-28', to: '2026-10-18' })
   })
 })

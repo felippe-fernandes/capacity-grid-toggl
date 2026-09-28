@@ -20,3 +20,9 @@ export function mondayOf(iso: string): string {
 export function daysBetween(from: string, to: string): number {
   return Math.round((toDate(to).getTime() - toDate(from).getTime()) / DAY_MS)
 }
+
+const weekLabel = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+
+export function formatWeek(iso: string): string {
+  return weekLabel.format(toDate(iso))
+}

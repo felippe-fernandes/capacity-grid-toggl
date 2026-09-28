@@ -11,7 +11,10 @@ const rangeSchema = z.object({
 
 export type Range = z.infer<typeof rangeSchema>
 
-export const DEFAULT_RANGE: Range = { from: '2025-12-29', to: '2026-01-18' }
+export function defaultRange(today: string): Range {
+  const from = mondayOf(today)
+  return { from, to: addDays(from, 20) }
+}
 
 function sundayOf(iso: string): string {
   return addDays(mondayOf(iso), 6)

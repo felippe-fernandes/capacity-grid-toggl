@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { fetchCapacity } from './api/capacity'
 import { CapacityInput } from './components/CapacityInput'
 import { useDebouncedValue } from './hooks/useDebouncedValue'
+import { formatWeek } from './lib/dates'
 import type { Filters } from './lib/filters'
 import { status, type Status } from './lib/status'
 
@@ -71,11 +72,14 @@ export function CapacityGrid({ from, to, filters }: Props) {
         <table className="w-full border-collapse text-sm tabular-nums">
           <thead className="sticky top-0 z-10 bg-[Canvas]">
             <tr>
-              <th className="px-3 py-2 text-left font-medium">Person</th>
+              <th className="sticky left-0 z-20 bg-[Canvas] px-3 py-2 text-left font-medium">Person</th>
               <th className="px-3 py-2 text-right font-medium">Capacity</th>
-              {data.weeks.map((week) => (
-                <th key={week} className="px-3 py-2 text-right font-medium whitespace-nowrap">
-                  {week}
+              {data.weeks.map((week, i) => (
+                <th key={week} title={week} className="px-3 py-2 text-right font-medium whitespace-nowrap">
+                  {formatWeek(week)}
+                  {(i === 0 || week.slice(0, 4) !== data.weeks[i - 1].slice(0, 4)) && (
+                    <span className="block text-xs font-normal text-gray-500">{week.slice(0, 4)}</span>
+                  )}
                 </th>
               ))}
             </tr>
@@ -90,7 +94,10 @@ export function CapacityGrid({ from, to, filters }: Props) {
             )}
             {data.people.map((person) => (
               <tr key={person.id} className="border-t border-gray-200 dark:border-gray-800">
-                <th scope="row" className="px-3 py-2 text-left font-normal whitespace-nowrap">
+                <th
+                  scope="row"
+                  className="sticky left-0 z-[1] bg-[Canvas] px-3 py-2 text-left font-normal whitespace-nowrap"
+                >
                   {person.name}
                 </th>
                 <td className="px-3 py-2 text-right">
