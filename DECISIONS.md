@@ -83,3 +83,7 @@
   I found this by stopping the API while testing.
 - Go tests now run the capacity query against the seed, and the edit hook has its own test.
 - Still to do: virtualization and pagination for the real roster size.
+- Measured instead of guessing: the first page for 26 weeks takes about 270ms, and about 105ms of
+  that is expanding every assignment into working days. The date index is used, but once per day.
+  Next I'd count overlapping weekdays per week instead of per day, add a GiST index on the date
+  range (needs a schema change), and in production keep a weekly allocation table up to date.

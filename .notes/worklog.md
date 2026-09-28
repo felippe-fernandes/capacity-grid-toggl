@@ -74,4 +74,7 @@ left unfinished. Append as you go; a line or two per entry is right.
 - still not done: virtualization and pagination
 - turned off react-hooks/incompatible-library for useVirtualRows only. it warns about the react compiler memoizing useVirtualizer, and we don't use the compiler. measureElement passed to the memo row is stable
 - vitest split in two projects: lib/ and api/ tests run in node, hooks/ and components/ in jsdom. jsdom was 64% of test time, and it also keeps lib/ honest about not touching the dom
+- measured, 26 weeks, first page: api answers in ~270ms. the day-by-day allocation join is ~105ms of that
+- explain: the (start_date, end_date) index is used, but once per workday (130 loops x ~2000 rows = ~263k day/assignment pairs). cost grows with days x assignments
+- would fix: join assignments to weeks and count overlapping weekdays per week (5x fewer pairs), a gist index on daterange(start_date, end_date) (schema change), and in production a precomputed weekly allocation table
 
