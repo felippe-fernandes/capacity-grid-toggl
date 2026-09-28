@@ -53,7 +53,8 @@ func main() {
 func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	var people int
 	if err := s.db.QueryRow(r.Context(), `SELECT count(*) FROM people`).Scan(&people); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("health: %v", err)
+		writeError(w, http.StatusInternalServerError, "database unavailable")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "people": people})

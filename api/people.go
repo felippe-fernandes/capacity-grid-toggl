@@ -30,8 +30,15 @@ func (s *server) handleUpdatePerson(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid person id")
 		return
 	}
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<10)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
 	var req updatePersonRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.WeeklyHours == nil {
+	if err := decoder.Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, `body must be JSON like {"weeklyHours": 32}`)
+		return
+	}
+	if req.WeeklyHours == nil {
 		writeError(w, http.StatusBadRequest, "weeklyHours is required")
 		return
 	}
