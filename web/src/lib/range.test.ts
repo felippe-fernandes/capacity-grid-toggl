@@ -64,7 +64,7 @@ describe('shiftRange', () => {
 })
 
 describe('defaultRange', () => {
-  it('starts on the current week and shows three weeks', () => {
-    expect(defaultRange('2026-09-30')).toEqual({ from: '2026-09-28', to: '2026-10-18' })
+  it('starts on the current week and shows five weeks', () => {
+    expect(defaultRange('2026-09-30')).toEqual({ from: '2026-09-28', to: '2026-11-01' })
   })
 })

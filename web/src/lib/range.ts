@@ -12,7 +12,7 @@ export type Range = z.infer<typeof rangeSchema>
 
 export function defaultRange(today: string): Range {
   const from = mondayOf(today)
-  return { from, to: addDays(from, 20) }
+  return { from, to: addDays(from, 34) }
 }
 
 function sundayOf(iso: string): string {
