@@ -1,18 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { weeklyHoursSchema, type PersonCapacity } from '../api/capacity'
 import { useUpdateWeeklyHours } from '../hooks/useUpdateWeeklyHours'
 
 export function CapacityInput({ person }: { person: PersonCapacity }) {
-  const [draft, setDraft] = useState(String(person.weeklyHours))
-  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState<string | null>(null)
   const [invalid, setInvalid] = useState<string | null>(null)
   const mutation = useUpdateWeeklyHours(person.id)
 
-  useEffect(() => {
-    if (!editing && !mutation.isError) setDraft(String(person.weeklyHours))
-  }, [person.weeklyHours, editing, mutation.isError])
+  const value = draft ?? String(person.weeklyHours)
 
   function save() {
+    if (draft === null) return
     const parsed = weeklyHoursSchema.safeParse(draft.trim() === '' ? NaN : Number(draft))
     if (!parsed.success) {
       setInvalid(parsed.error.issues[0].message)
@@ -20,16 +18,17 @@ export function CapacityInput({ person }: { person: PersonCapacity }) {
     }
     setInvalid(null)
     if (parsed.data === person.weeklyHours) {
+      setDraft(null)
       mutation.reset()
       return
     }
-    mutation.mutate(parsed.data)
+    mutation.mutate(parsed.data, { onSuccess: () => setDraft(null) })
   }
 
   function discard() {
+    setDraft(null)
     setInvalid(null)
     mutation.reset()
-    setDraft(String(person.weeklyHours))
   }
 
   const message = invalid ?? (mutation.isError ? mutation.error.message : null)
@@ -45,11 +44,9 @@ export function CapacityInput({ person }: { person: PersonCapacity }) {
       <input
         type="number"
         step="any"
-        value={draft}
+        value={value}
         onChange={(e) => setDraft(e.target.value)}
-        onFocus={() => setEditing(true)}
         onBlur={() => {
-          setEditing(false)
           if (!mutation.isError) save()
         }}
         onKeyDown={(e) => {
