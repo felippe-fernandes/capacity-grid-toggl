@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,6 +18,18 @@ func patchPerson(s *server, id, body string) *httptest.ResponseRecorder {
 	return rec
 }
 
+func restoreEliAfter(t *testing.T, s *server) float64 {
+	t.Helper()
+	var original float64
+	if err := s.db.QueryRow(context.Background(), `SELECT weekly_hours::float8 FROM people WHERE id = 5`).Scan(&original); err != nil {
+		t.Fatalf("read original: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = s.db.Exec(context.Background(), `UPDATE people SET weekly_hours = $1 WHERE id = 5`, original)
+	})
+	return original
+}
+
 func TestUpdatePersonRejectsBadInput(t *testing.T) {
 	s := testServer(t)
 	cases := []struct {
@@ -26,7 +39,8 @@ func TestUpdatePersonRejectsBadInput(t *testing.T) {
 		{"id is not a number", "abc", `{"weeklyHours":10}`, http.StatusBadRequest},
 		{"missing field", "5", `{}`, http.StatusBadRequest},
 		{"negative hours", "5", `{"weeklyHours":-1}`, http.StatusBadRequest},
-		{"more hours than a week has", "5", `{"weeklyHours":169}`, http.StatusBadRequest},
+		{"more than 80 hours", "5", `{"weeklyHours":81}`, http.StatusBadRequest},
+		{"not a whole number", "5", `{"weeklyHours":12.5}`, http.StatusBadRequest},
 		{"unknown field", "5", `{"weeklyHours":10,"name":"x"}`, http.StatusBadRequest},
 		{"not json", "5", `hello`, http.StatusBadRequest},
 		{"body too large", "5", `{"weeklyHours":` + strings.Repeat("0", 2000) + `1}`, http.StatusBadRequest},
@@ -43,17 +57,9 @@ func TestUpdatePersonRejectsBadInput(t *testing.T) {
 
 func TestUpdatePersonSavesAndReturnsThePerson(t *testing.T) {
 	s := testServer(t)
-	ctx := context.Background()
+	restoreEliAfter(t, s)
 
-	var original float64
-	if err := s.db.QueryRow(ctx, `SELECT weekly_hours::float8 FROM people WHERE id = 5`).Scan(&original); err != nil {
-		t.Fatalf("read original: %v", err)
-	}
-	t.Cleanup(func() {
-		_, _ = s.db.Exec(context.Background(), `UPDATE people SET weekly_hours = $1 WHERE id = 5`, original)
-	})
-
-	rec := patchPerson(s, "5", `{"weeklyHours":12.5}`)
+	rec := patchPerson(s, "5", `{"weeklyHours":12}`)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d: %s", rec.Code, rec.Body.String())
 	}
@@ -61,12 +67,38 @@ func TestUpdatePersonSavesAndReturnsThePerson(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&saved); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if saved.ID != 5 || saved.WeeklyHours != 12.5 {
+	if saved.ID != 5 || saved.WeeklyHours != 12 {
 		t.Errorf("saved = %+v", saved)
 	}
 
-	body := getCapacity(t, s, "from=2026-01-05&to=2026-01-11&q=Nakamura")
-	if len(body.People) != 1 || body.People[0].WeeklyHours != 12.5 {
-		t.Errorf("capacity after save = %+v", body.People)
+	page := getCapacity(t, s, "from=2026-01-05&to=2026-01-11&q=Nakamura")
+	if len(page.People) != 1 || page.People[0].WeeklyHours != 12 {
+		t.Errorf("capacity after save = %+v", page.People)
 	}
+}
+
+func TestUpdatePersonChecksTheExpectedValue(t *testing.T) {
+	s := testServer(t)
+	original := restoreEliAfter(t, s)
+
+	t.Run("saves when the expected value is still current", func(t *testing.T) {
+		rec := patchPerson(s, "5", fmt.Sprintf(`{"weeklyHours":20,"expectedWeeklyHours":%v}`, original))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d: %s", rec.Code, rec.Body.String())
+		}
+	})
+
+	t.Run("refuses a stale expected value and returns the current one", func(t *testing.T) {
+		rec := patchPerson(s, "5", `{"weeklyHours":30,"expectedWeeklyHours":7}`)
+		if rec.Code != http.StatusConflict {
+			t.Fatalf("status = %d: %s", rec.Code, rec.Body.String())
+		}
+		var body conflictBody
+		if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if body.Error.Code != codeConflict || body.Current.ID != 5 || body.Current.WeeklyHours != 20 {
+			t.Errorf("body = %+v", body)
+		}
+	})
 }

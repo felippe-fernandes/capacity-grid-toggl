@@ -45,8 +45,9 @@ const personSchema = z.object({ id: z.number(), name: z.string(), weeklyHours: z
 
 export const weeklyHoursSchema = z
   .number({ error: 'Enter a number of hours' })
-  .min(0, "Hours can't be negative")
-  .max(168, 'A week only has 168 hours')
+  .int('Weekly hours must be a whole number from 0 to 80')
+  .min(0, 'Weekly hours must be a whole number from 0 to 80')
+  .max(80, 'Weekly hours must be a whole number from 0 to 80')
 
 export async function updateWeeklyHours(id: number, weeklyHours: number) {
   let res: Response

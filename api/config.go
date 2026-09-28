@@ -9,4 +9,7 @@ const (
 	maxSearchLen   = 100
 	requestTimeout = 5 * time.Second
 	dbMaxConns     = 20
+	minWeeklyHours = 0
+	maxWeeklyHours = 80
+
 )
