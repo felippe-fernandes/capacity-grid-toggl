@@ -1,12 +1,6 @@
 package main
 
-import (
-	"net/http"
-	"strings"
-	"time"
-)
-
-const maxWeeks = 26
+import "net/http"
 
 type personCapacity struct {
 	ID          int       `json:"id"`
@@ -28,33 +22,9 @@ type capacityResponse struct {
 //
 // The response shape is yours to design — the grid in web/ is the consumer.
 func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	from, err := time.Parse(time.DateOnly, query.Get("from"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, codeInvalidRange, "from must be YYYY-MM-DD")
-		return
-	}
-	to, err := time.Parse(time.DateOnly, query.Get("to"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, codeInvalidRange, "to must be YYYY-MM-DD")
-		return
-	}
-	if to.Before(from) {
-		writeError(w, http.StatusBadRequest, codeInvalidRange, "to must not be before from")
-		return
-	}
-	search := strings.TrimSpace(query.Get("q"))
-	overOnly := query.Get("over") == "1"
-
-	from = mondayOf(from)
-	to = mondayOf(to).AddDate(0, 0, 6)
-
-	var weeks []string
-	for d := from; d.Before(to); d = d.AddDate(0, 0, 7) {
-		weeks = append(weeks, d.Format(time.DateOnly))
-	}
-	if len(weeks) > maxWeeks {
-		writeError(w, http.StatusBadRequest, codeRangeTooLarge, "range is limited to 26 weeks")
+	p, bad := parseCapacityParams(r.URL.Query())
+	if bad != nil {
+		writeError(w, http.StatusBadRequest, bad.code, bad.message)
 		return
 	}
 
@@ -93,7 +63,7 @@ func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
 		FROM matching m
 		CROSS JOIN weeks w
 		LEFT JOIN allocated al ON al.person_id = m.id AND al.week_start = w.week_start
-		ORDER BY m.name, m.id, w.week_start`, from, to, search, overOnly)
+		ORDER BY m.name, m.id, w.week_start`, p.From, p.To, p.Search, p.OverOnly)
 	if err != nil {
 		writeInternalError(w, r, "load capacity", err)
 		return
@@ -120,10 +90,5 @@ func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, capacityResponse{Weeks: weeks, People: people, Total: total})
-}
-
-func mondayOf(t time.Time) time.Time {
-	offset := (int(t.Weekday()) + 6) % 7
-	return t.AddDate(0, 0, -offset)
+	writeJSON(w, http.StatusOK, capacityResponse{Weeks: p.Weeks, People: people, Total: total})
 }

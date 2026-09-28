@@ -11,6 +11,9 @@ import (
 const (
 	codeInvalidRange  = "invalid_range"
 	codeRangeTooLarge = "range_too_large"
+	codeInvalidQuery  = "invalid_query"
+	codeInvalidLimit  = "invalid_limit"
+	codeInvalidCursor = "invalid_cursor"
 	codeInvalidID     = "invalid_id"
 	codeInvalidBody   = "invalid_body"
 	codeInvalidHours  = "invalid_hours"

@@ -36,10 +36,16 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		dsn = "postgres://capacity:capacity@localhost:5432/capacity?sslmode=disable"
 	}
 
-	db, err := pgxpool.New(ctx, dsn)
+	cfg, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		return fmt.Errorf("database url: %w", err)
+	}
+	cfg.MaxConns = dbMaxConns
+	db, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return fmt.Errorf("connect: %w", err)
 	}
+
 	defer db.Close()
 
 	if err := waitForDB(ctx, db); err != nil {
@@ -49,7 +55,7 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	s := &server{db: db}
 	httpServer := &http.Server{
 		Addr:              ":8080",
-		Handler:           logRequests(logger, s.routes()),
+		Handler:           logRequests(logger, withTimeout(requestTimeout, s.routes())),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      30 * time.Second,

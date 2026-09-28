@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+	"context"
 )
 
 type statusRecorder struct {
@@ -27,5 +28,13 @@ func logRequests(logger *slog.Logger, next http.Handler) http.Handler {
 			"status", rec.status,
 			"duration_ms", time.Since(start).Milliseconds(),
 		)
+	})
+}
+
+func withTimeout(timeout time.Duration, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), timeout)
+		defer cancel()
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
