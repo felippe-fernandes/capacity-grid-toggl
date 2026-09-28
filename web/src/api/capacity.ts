@@ -11,7 +11,7 @@ const personCapacitySchema = z.object({
 const capacityDataSchema = z.object({
   weeks: z.array(z.iso.date()),
   people: z.array(personCapacitySchema),
-  matched: z.number()
+  matched: z.number(),
 })
 
 export type PersonCapacity = z.infer<typeof personCapacitySchema>
