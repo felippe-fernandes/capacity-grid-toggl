@@ -100,6 +100,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("GET /api/health", s.handleHealth)
 	mux.HandleFunc("GET /api/capacity", s.handleCapacity)
 	mux.HandleFunc("PATCH /api/people/{id}", s.handleUpdatePerson)
+	mux.HandleFunc("GET /api/capacity/summary", s.handleSummary)
 	return mux
 }
 

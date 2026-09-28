@@ -32,7 +32,7 @@ type querier interface {
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 }
 
-const capacityCTEs = `
+const allocationCTEs = `
 	WITH weeks AS (
 		SELECT generate_series($1::date, $2::date, interval '1 week')::date AS week_start
 	),
@@ -47,7 +47,9 @@ const capacityCTEs = `
 		JOIN workdays wd ON wd.day BETWEEN a.start_date AND a.end_date
 		WHERE a.start_date <= $2 AND a.end_date >= $1
 		GROUP BY a.person_id, wd.week_start
-	),
+	)`
+
+const capacityCTEs = allocationCTEs + `,
 	matching AS (
 		SELECT p.id, p.name, p.weekly_hours
 		FROM people p
@@ -57,7 +59,6 @@ const capacityCTEs = `
 		    WHERE al.person_id = p.id AND al.hours > p.weekly_hours
 		  ))
 	)`
-
 const peoplePageQuery = capacityCTEs + `,
 	page AS (
 		SELECT id, name, weekly_hours
