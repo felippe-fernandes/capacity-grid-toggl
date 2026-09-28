@@ -40,7 +40,7 @@ export function CapacityGrid({ from, to, filters }: Props) {
     return <p className="py-4 text-gray-500">Loading capacity…</p>
   }
 
-  if (error) {
+  if (error && !data) {
     return (
       <div role="alert" className="py-4 text-red-700 dark:text-red-400">
         <p>Could not load capacity: {error.message}</p>
@@ -53,6 +53,14 @@ export function CapacityGrid({ from, to, filters }: Props) {
 
   return (
     <>
+      {error && (
+        <p role="alert" className="mb-2 text-sm text-red-700 dark:text-red-400">
+          Couldn't refresh, showing the last data we had.{' '}
+          <button onClick={() => refetch()} className="underline">
+            Try again
+          </button>
+        </p>
+      )}
       <p className="mb-2 text-sm text-gray-500">
         Showing {data.people.length} of {data.total} people
       </p>

@@ -24,7 +24,7 @@ export function useUpdateWeeklyHours(personId: number) {
     onError: (_error, _hours, context) => {
       context?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data))
     },
-    onSettled: () => {
+    onSuccess: () => {
       if (queryClient.isMutating({ mutationKey }) === 1) {
         return queryClient.invalidateQueries({ queryKey: ['capacity'] })
       }
