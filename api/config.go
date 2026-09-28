@@ -11,5 +11,4 @@ const (
 	dbMaxConns     = 20
 	minWeeklyHours = 0
 	maxWeeklyHours = 80
-
 )
