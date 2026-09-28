@@ -53,3 +53,22 @@ left unfinished. Append as you go; a line or two per entry is right.
 - no zod on filters, any url value maps to a valid filter (text is a search, anything but over=1 is off)
 - with "only over-allocated" on, a person disappears as soon as you fix their capacity. makes sense but could surprise someone, left as is
 - tests: filterPeople, parse/serialize filters, empty param removal in the hook. 28 passing
+
+
+## after the deadline (branch refactor/after-deadline, main is the submission)
+
+- reviewed my own submission as a senior fullstack would, fixed what i found here
+- filters moved to the api: `q` uses position(lower()) so % and _ are plain text, `over=1` uses EXISTS on the allocated cte. api also returns `total`
+- frontend no longer filters, it only asks. search waits 300ms after typing stops, one request instead of one per letter
+- go tests against the seed: weekends, weekend-crossing assignment, fragmented rows summed, eli with 0 capacity, filters, bad input, PATCH saves and restores eli after
+- capacity_test.go got committed after people_test.go, which uses its helpers. the api builds at every commit, `go test` only passes from that commit on
+- PATCH: 1kb body limit, unknown fields rejected. /health stopped sending db errors to the client
+- edit flow: draft stays when a save fails, with retry and discard. human messages instead of the api field names. zod checks 0..168 before sending
+- saves for the same person go in a queue (react query mutation scope), so an old response can't land after a newer one
+- after the last successful save the visible range is refetched from the server. was "no refetch" before, changed because a cancelled fetch was never retried
+- found while testing with the api stopped: a failed save triggered a refetch, which also failed and replaced the whole grid with an error. now it only refetches on success, and a failed refetch keeps the table with a banner on top
+- the draft isn't overwritten while the input has focus
+- test for the edit hook: optimistic update on every cached range, rollback, network error message, save queue
+- week headers read "Dec 29" with the year when it changes, name column sticky, page opens on the current week
+- left alone: the 26-week limit is still in go and ts (a config endpoint for one number felt like too much), and the duplicate commits already on main
+- still not done: virtualization and pagination
