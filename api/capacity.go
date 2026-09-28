@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log"
 	"net/http"
 	"time"
@@ -22,6 +24,10 @@ type capacityResponse struct {
 
 // handleCapacity serves GET /api/capacity?from=YYYY-MM-DD&to=YYYY-MM-DD
 //
+// It should return, for every person and every week in the requested range,
+// how many hours they are allocated and how much capacity they have.
+//
+// The response shape is yours to design — the grid in web/ is the consumer.
 func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
 	from, err := time.Parse(time.DateOnly, r.URL.Query().Get("from"))
 	if err != nil {
@@ -72,6 +78,9 @@ func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN allocated al ON al.person_id = p.id AND al.week_start = w.week_start
 		ORDER BY p.name, p.id, w.week_start`, from, to)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return
+		}
 		log.Printf("capacity query: %v", err)
 		writeError(w, http.StatusInternalServerError, "could not load capacity")
 		return
@@ -95,6 +104,9 @@ func (s *server) handleCapacity(w http.ResponseWriter, r *http.Request) {
 		last.Allocated = append(last.Allocated, hours)
 	}
 	if err := rows.Err(); err != nil {
+		if errors.Is(err, context.Canceled) {
+			return
+		}
 		log.Printf("capacity rows: %v", err)
 		writeError(w, http.StatusInternalServerError, "could not load capacity")
 		return

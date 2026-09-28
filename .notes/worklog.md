@@ -42,3 +42,4 @@ left unfinished. Append as you go; a line or two per entry is right.
 - api validates weeklyHours 0..168, 404 for unknown person. tested with curl + in the grid (-1 shows the error and rolls back)
 - editing capacity rewrites past weeks too, no dates on weekly_hours. would need a capacity_changes table with effective_from, schema is fixed
 - not done: two quick saves on the same person can race, no automated test for the edit flow
+- after the required parts: stopped logging client cancellations (context canceled) as errors in the capacity endpoint. checked by clicking the arrows fast with `docker compose logs -f api` open, nothing new shows up
