@@ -1,10 +1,10 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"time"
-	"context"
 )
 
 type statusRecorder struct {
