@@ -9,7 +9,10 @@ export function useSearchParamsState<T>(
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    for (const [key, param] of Object.entries(serialize(value))) params.set(key, param)
+    for (const [key, param] of Object.entries(serialize(value))) {
+      if (param) params.set(key, param)
+      else params.delete(key)
+    }
     const search = `?${params}`
     if (search !== window.location.search) {
       window.history.replaceState(window.history.state, '', search)

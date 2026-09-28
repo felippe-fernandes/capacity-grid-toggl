@@ -63,4 +63,11 @@ describe('useSearchParamsState', () => {
     act(() => result.current[1]({ q: 'b' }))
     expect(window.history.length).toBe(length)
   })
+
+  it('removes a param when its value is empty', () => {
+    setUrl('?q=hello&tab=people')
+    const { result } = renderFilterHook()
+    act(() => result.current[1]({ q: '' }))
+    expect(window.location.search).toBe('?tab=people')
+  })
 })
